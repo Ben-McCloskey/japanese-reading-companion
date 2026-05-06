@@ -16,6 +16,18 @@ export function startAutoUpdater(deps: UpdaterDeps): void {
   // Quieter logs unless we actually need them.
   autoUpdater.logger = console;
 
+  // electron-builder doesn't bake GH_TOKEN into app-update.yml, so we set the
+  // Authorization header here. The token is injected at build time via Vite
+  // `define` (see electron.vite.config.ts) and ends up as a string literal in
+  // the compiled main bundle. Without it the updater falls back to the public
+  // releases.atom feed, which 404s on private repos.
+  if (__GH_TOKEN__) {
+    autoUpdater.requestHeaders = {
+      Authorization: `token ${__GH_TOKEN__}`,
+      Accept: 'application/vnd.github.v3+json',
+    };
+  }
+
   autoUpdater.on('checking-for-update', () => {
     deps.onStatus({ kind: 'checking' });
   });
