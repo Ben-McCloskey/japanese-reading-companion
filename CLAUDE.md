@@ -78,7 +78,7 @@ src/
     types/                         jmdict, tokenizer, deck, sessions
 build/icon.svg, build/icon.png     Hanko-stamp app icon
 electron-builder.yml               Mac DMG + ZIP, GitHub publish target
-RELEASING.md                       Release workflow (private repo + GH_TOKEN)
+RELEASING.md                       Release workflow (public repo, GH_TOKEN for upload)
 ```
 
 ## Commands
@@ -106,8 +106,10 @@ If you add a script, document it here.
   `dmg-builder` shells out to a Python script and the user's pyenv Python is
   3.7.9 (missing `_ctypes`). Already baked into the `package`/`release`
   scripts.
-- **`GH_TOKEN`** must be set for `npm run release` (uploads to private GitHub
-  repo). Stored in user's `~/.zshrc`. See `RELEASING.md`.
+- **`GH_TOKEN`** must be set for `npm run release` (uploads to the public
+  GitHub repo). Stored in user's `~/.zshrc`. The installed app does not
+  need the token — it reads from the public repo without auth. See
+  `RELEASING.md`.
 - **macOS Japanese TTS voices** are hidden behind System Settings →
   Accessibility → Spoken Content → Manage Voices. Default Kyoko/Otoya are
   robotic; Premium variants are a free download and noticeably better.

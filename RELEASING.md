@@ -2,106 +2,84 @@
 
 The app uses `electron-updater` pointed at the public GitHub repo
 [`Ben-McCloskey/japanese-reading-companion`](https://github.com/Ben-McCloskey/japanese-reading-companion).
-Once the one-time setup is done, every release is two commands.
+Once the one-time setup is done, every release is two commands plus one click.
 
-> **Why public?** electron-updater's GitHub provider has multiple unfixed bugs
-> for private repos (it ignores `private: true` at runtime, hits the wrong
-> URLs, won't accept Authorization headers on the asset-download endpoints).
-> Patching around them was whack-a-mole. The source has nothing sensitive in
-> it, so going public was the cleaner fix.
+> **Why public?** electron-updater 6.x has multiple unfixed bugs for private
+> GitHub repos: the runtime ignores `private: true`, hits the wrong URLs, and
+> the asset-download endpoint refuses Authorization headers. Patching around
+> them turned into whack-a-mole. The source has nothing sensitive, so going
+> public was the cleaner fix and the auto-updater works on stock
+> electron-updater behavior.
 
 ---
 
-## One-time setup (~5 min)
+## One-time setup (already done on this machine, kept for reference)
 
-### 1. Create the private GitHub repo
+### 1. Public GitHub repo
 
-On github.com, create a new repository:
+Already exists: [`Ben-McCloskey/japanese-reading-companion`](https://github.com/Ben-McCloskey/japanese-reading-companion).
+The owner+repo pair is hard-coded in `electron-builder.yml` → `publish.owner`/`publish.repo`.
 
-- **Name**: `japanese-reading-companion` (must match `electron-builder.yml` → `publish.repo`)
-- **Visibility**: Private
-- It can be empty. We don't push source code there — only release artifacts.
+### 2. `GH_TOKEN` for the upload step
 
-You don't have to push the code to it. Releases are uploaded via the GitHub
-API by `electron-builder`.
+`electron-builder` needs a Classic Personal Access Token to upload release
+artifacts to GitHub. (The installed app doesn't need a token — it reads from
+the public repo anonymously.)
 
-### 2. Plug your username into the publish config
+To regenerate the token if it ever expires:
 
-Edit [`electron-builder.yml`](electron-builder.yml) and replace
-`REPLACE_WITH_GH_USERNAME` with your actual GitHub username:
+1. Go to https://github.com/settings/tokens (Classic, **not** fine-grained).
+2. **Generate new token (classic)** → name: `Japanese Reading Companion releases`.
+3. Scope: just **`public_repo`** (or `repo` if you want the option to flip
+   private later).
+4. Copy the token, then add to your shell profile:
 
-```yaml
-publish:
-  - provider: github
-    owner: YOUR_GH_USERNAME       # <-- here
-    repo: japanese-reading-companion
-    private: true
-```
+   ```bash
+   export GH_TOKEN="ghp_..."
+   ```
 
-### 3. Generate a Classic Personal Access Token
+   Already set in `~/.zshrc`. Reload your shell or open a new terminal.
 
-Go to https://github.com/settings/tokens (Classic tokens, **not** fine-grained
-— `electron-updater` needs the older API).
-
-- Click **Generate new token (classic)**
-- Note: `Japanese Reading Companion releases`
-- Expiration: **No expiration** (or whatever you prefer; you'll need to rotate
-  it when it expires)
-- Scopes: only **`repo`** (full control of private repositories)
-- Click **Generate token**
-- Copy it somewhere safe — you only see it once
-
-### 4. Store the token
-
-Add it to your shell profile (`~/.zshrc` or similar) so every release picks it
-up automatically:
-
-```bash
-export GH_TOKEN="ghp_..."   # your classic PAT
-```
-
-Reload your shell (`source ~/.zshrc` or open a new terminal).
-
-⚠️ **Security note**: this token gets baked into the app's `app-update.yml`
-file at build time so the running app can fetch private releases. Anyone who
-gets a copy of your `.app` bundle can extract it and read your private repo.
-For a personal app on your own machines this is acceptable; just don't share
-the bundle. Rotate the token if it leaks.
+5. Verify: `echo $GH_TOKEN` should print something.
 
 ---
 
 ## Per-release workflow
 
 ```bash
-# bump version (also commits if you're in a git repo)
-npm version patch          # 0.1.0 → 0.1.1
+# bump version (creates a git tag if you're in a git repo)
+npm version patch          # 0.1.x → 0.1.(x+1)
 # (or `minor` / `major`)
 
-# build, sign, upload to GitHub Releases as a draft
+# build, sign ad-hoc, upload draft to GitHub
 npm run release
 ```
 
 `npm run release` does:
 
-1. `electron-vite build` — bundles main / preload / renderer
+1. `electron-vite build` — bundles main / preload / renderer with the new
+   version baked into the sidebar footer.
 2. `electron-builder --publish always` — packages DMG + ZIP, signs ad-hoc,
-   creates a GitHub Release tagged `v0.1.1` with the artifacts attached and
+   creates a GitHub Release tagged `v0.1.x` with the artifacts attached and
    `latest-mac.yml` for the updater.
 
 By default the release is created as a **draft**. Go to your GitHub repo's
-Releases page, find the new draft, and click **Publish release**. Now installed
-copies of the app will see the update on their next check.
+Releases page, find the draft, and click **Publish release**. Now installed
+copies of the app see the update on their next check (and immediately on
+launch).
 
 ---
 
-## What users see
+## What the user sees
 
 - App checks for updates on launch and every 30 min after.
-- Sidebar footer shows quiet status text:
-  - `v0.1.0` — idle (or whatever the installed version is)
-  - `downloading update… 47%` — a new release is downloading in the background
-  - **Update ready · v0.1.1 · click to restart** — pulsing accent button.
-    Click it → app quits and relaunches on the new version.
+- Sidebar footer is reactive:
+  - `vX.Y.Z` — idle (whatever version is installed).
+  - `downloading update… 47%` — a new release is downloading in the
+    background.
+  - **Update ready · vX.Y.(Z+1) · click to restart** — pulsing accent
+    button. Click → app quits and relaunches on the new version. SQLite,
+    deck, review history all preserved.
 - All happens silently if there's no update.
 - Dev mode (`npm run dev`) skips the updater entirely.
 
@@ -110,16 +88,17 @@ copies of the app will see the update on their next check.
 ## Troubleshooting
 
 **"401 Unauthorized" when running `npm run release`**
-Token isn't set or doesn't have `repo` scope. Verify with `echo $GH_TOKEN`.
-The token must be a **Classic** PAT (fine-grained tokens don't work with
-`electron-updater`'s GitHub provider).
+`GH_TOKEN` isn't set or doesn't have the `public_repo` (or `repo`) scope.
+Verify with `echo $GH_TOKEN`. The token must be a **Classic** PAT — fine-
+grained tokens don't work with electron-builder's GitHub uploader.
 
-**App says "update check failed" in the sidebar**
-Open dev tools (or check the main-process console in the packaged app's logs
-at `~/Library/Logs/Japanese Reading Companion/`) — the actual error is logged.
-Most common: token expired or got revoked.
+**"Update check failed" in the sidebar**
+Open the main-process logs at
+`~/Library/Logs/Japanese Reading Companion/main.log`. The actual
+electron-updater error is logged there. Common causes: rate-limited by
+GitHub (rare for our volume), no network, or you haven't published the
+draft release yet.
 
-**Want to test the updater flow without actually releasing**
-Bump the version locally, run `npm run package` (no publish), and manually
-copy the artifacts to a draft GitHub release. Or just trust the flow: it
-follows the standard `electron-updater` pattern, no surprises.
+**Want to test the release locally without publishing**
+Run `npm run package` (no `--publish`). Artifacts land in
+`release/<version>/` but nothing is uploaded.

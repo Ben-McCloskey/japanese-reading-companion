@@ -28,7 +28,7 @@ telemetry.
   single-user desktop)
 - **SRS algorithm**: `ts-fsrs` (FSRS — modern Anki successor)
 - **TTS**: Web Speech API using OS-installed Japanese voices
-- **Auto-updates**: `electron-updater` against a private GitHub Releases
+- **Auto-updates**: `electron-updater` against a public GitHub Releases
   repo
 
 ## Features (all shipped)
@@ -129,10 +129,12 @@ gates the rest of the app via `useDictStatus()` — `unknown` / `needs-import`
 ### Distribution
 
 - `npm run package` produces a DMG and ZIP at `release/<version>/`.
-- `npm run release` does the same and uploads as a **draft** to private
-  GitHub repo `Ben-McCloskey/japanese-reading-companion`. Token from
-  `GH_TOKEN` env var, baked into `app-update.yml` so the installed app can
-  read its own private releases.
+- `npm run release` does the same and uploads as a **draft** to the public
+  GitHub repo `Ben-McCloskey/japanese-reading-companion`. The `GH_TOKEN`
+  env var is used to authenticate the upload; the installed app reads
+  releases from the public repo without auth (electron-updater 6.x has
+  multiple unfixed bugs around private GitHub repos that pushed the
+  decision toward going public).
 - App polls GitHub every 30 min (and on launch); when an update arrives,
   the sidebar footer shows a cinnabar **"update ready · vX.Y.Z · click to
   restart"** button. One click → `quitAndInstall` → app relaunches on the

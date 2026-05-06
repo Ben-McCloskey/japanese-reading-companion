@@ -21,7 +21,7 @@ npm run typecheck    # strict TypeScript across main + renderer
 npm run test         # vitest (FSRS wrapper)
 npm run build        # production build into out/
 npm run package      # build a macOS DMG + ZIP into release/
-npm run release      # build + upload as draft to private GitHub repo
+npm run release      # build + upload as draft to public GitHub repo
 npm run db:reset     # delete the local SQLite database
 ```
 
@@ -61,8 +61,10 @@ the two sides. `contextIsolation` is on, `nodeIntegration` is off,
 
 ## Distribution & updates
 
-App publishes to a private GitHub repo via `electron-updater`. After the
-one-time setup in [`RELEASING.md`](RELEASING.md), shipping a new version is:
+App publishes to the public GitHub repo
+[`Ben-McCloskey/japanese-reading-companion`](https://github.com/Ben-McCloskey/japanese-reading-companion)
+via `electron-updater`. After the one-time setup in
+[`RELEASING.md`](RELEASING.md), shipping a new version is:
 
 ```bash
 npm version patch     # 0.1.x → 0.1.(x+1)
