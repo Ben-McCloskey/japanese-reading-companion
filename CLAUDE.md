@@ -230,15 +230,15 @@ If you add something that might slow these down, measure it.
 ## Distribution & updates
 
 - App ships as a macOS DMG (and ZIP) via `npm run release`. Uploads as a
-  **draft** to private GitHub repo
+  **draft** to public GitHub repo
   `Ben-McCloskey/japanese-reading-companion`. Drafts must be manually
   published on github.com to actually go live.
 - Auto-updater (`electron-updater`) polls the same repo every 30 minutes,
   downloads new versions in the background, surfaces a cinnabar
   "update ready" button in the sidebar footer. One click → `quitAndInstall`.
-- Token (`GH_TOKEN`) is baked into `app-update.yml` inside the bundle at
-  build time so the installed copy can read the private repo. Acceptable for
-  personal use; rotate the PAT if leaked. See `RELEASING.md`.
+- `GH_TOKEN` is required for the *upload* step (publishing) but the
+  installed app reads from the public repo without auth — no token in the
+  bundle. See `RELEASING.md`.
 
 ## What NOT to do
 

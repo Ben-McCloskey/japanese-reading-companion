@@ -25,6 +25,3 @@ publish:
   - provider: github
     owner: Ben-McCloskey
     repo: japanese-reading-companion
-    private: true
-    # Token is baked into app-update.yml at build time when GH_TOKEN is set,
-    # so the packaged app can read releases from the private repo.

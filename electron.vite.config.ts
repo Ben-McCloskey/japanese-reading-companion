@@ -5,13 +5,6 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
-    define: {
-      // Baked into the main bundle at build time so the packaged app can
-      // authenticate against the private GitHub Releases repo. Empty string
-      // in dev / when env is unset; the auto-updater is gated on app.isPackaged
-      // anyway so dev never reads it.
-      __GH_TOKEN__: JSON.stringify(process.env.GH_TOKEN ?? ''),
-    },
     build: {
       rollupOptions: {
         input: { index: resolve(__dirname, 'src/main/index.ts') },

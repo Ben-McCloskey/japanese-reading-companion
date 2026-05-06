@@ -1,7 +1,14 @@
 # Releasing & auto-updates
 
-The app uses `electron-updater` pointed at a private GitHub Releases repo.
+The app uses `electron-updater` pointed at the public GitHub repo
+[`Ben-McCloskey/japanese-reading-companion`](https://github.com/Ben-McCloskey/japanese-reading-companion).
 Once the one-time setup is done, every release is two commands.
+
+> **Why public?** electron-updater's GitHub provider has multiple unfixed bugs
+> for private repos (it ignores `private: true` at runtime, hits the wrong
+> URLs, won't accept Authorization headers on the asset-download endpoints).
+> Patching around them was whack-a-mole. The source has nothing sensitive in
+> it, so going public was the cleaner fix.
 
 ---
 
