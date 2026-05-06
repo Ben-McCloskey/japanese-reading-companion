@@ -1,0 +1,60 @@
+import { autoUpdater } from 'electron-updater';
+import type { UpdateStatus } from '@shared/ipc';
+
+interface UpdaterDeps {
+  onStatus: (status: UpdateStatus) => void;
+}
+
+/**
+ * Wires `electron-updater` into our IPC pipe. Checks once on app start, then
+ * every 30 minutes while the app is open. Downloads happen automatically; the
+ * user clicks "install" in the renderer to trigger `quitAndInstall`.
+ */
+export function startAutoUpdater(deps: UpdaterDeps): void {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  // Quieter logs unless we actually need them.
+  autoUpdater.logger = console;
+
+  autoUpdater.on('checking-for-update', () => {
+    deps.onStatus({ kind: 'checking' });
+  });
+  autoUpdater.on('update-not-available', () => {
+    deps.onStatus({ kind: 'idle' });
+  });
+  autoUpdater.on('update-available', (info) => {
+    deps.onStatus({ kind: 'downloading', version: info.version, percent: 0 });
+  });
+  autoUpdater.on('download-progress', (progress) => {
+    deps.onStatus({
+      kind: 'downloading',
+      percent: Math.round(progress.percent),
+    });
+  });
+  autoUpdater.on('update-downloaded', (info) => {
+    deps.onStatus({ kind: 'ready', version: info.version });
+  });
+  autoUpdater.on('error', (err) => {
+    deps.onStatus({
+      kind: 'error',
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
+
+  // Initial check + recurring poll. We don't await these — they run in the
+  // background and emit status updates as they progress.
+  void runCheck();
+  setInterval(runCheck, 30 * 60 * 1000);
+}
+
+async function runCheck(): Promise<void> {
+  try {
+    await autoUpdater.checkForUpdates();
+  } catch {
+    // Errors flow through the 'error' event handler above.
+  }
+}
+
+export function quitAndInstall(): void {
+  autoUpdater.quitAndInstall();
+}

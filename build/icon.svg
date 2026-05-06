@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Hanko-stamp inspiration: cinnabar field, off-white character -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b85245" />
+      <stop offset="100%" stop-color="#92382c" />
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)" rx="0" ry="0" />
+  <!-- Subtle inner stroke for tactile depth -->
+  <rect x="48" y="48" width="928" height="928" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2" />
+  <text
+    x="512"
+    y="700"
+    font-family="Hiragino Mincho ProN, 'Hiragino Mincho Pro', 'Yu Mincho', serif"
+    font-size="780"
+    font-weight="400"
+    fill="#fbf6ec"
+    text-anchor="middle">読</text>
+</svg>

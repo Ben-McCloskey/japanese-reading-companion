@@ -1,0 +1,30 @@
+appId: com.bmccloskey.japanese-reading-companion
+productName: Japanese Reading Companion
+directories:
+  output: release/${version}
+files:
+  - out/**/*
+  - package.json
+extraResources:
+  - from: node_modules/kuromoji/dict
+    to: kuromoji-dict
+  - from: src/main/data
+    to: data
+asarUnpack:
+  - node_modules/better-sqlite3/**/*
+mac:
+  target: [dmg, zip]
+  category: public.app-category.education
+  icon: build/icon.png
+win:
+  target: [nsis]
+linux:
+  target: [AppImage]
+  category: Education
+publish:
+  - provider: github
+    owner: Ben-McCloskey
+    repo: japanese-reading-companion
+    private: true
+    # Token is baked into app-update.yml at build time when GH_TOKEN is set,
+    # so the packaged app can read releases from the private repo.

@@ -1,0 +1,414 @@
+import { useCallback, useEffect, useState } from 'react';
+import { PageShell } from '@renderer/components/page-shell';
+import { SpeakerButton } from '@renderer/components/speaker-button';
+import { cn } from '@renderer/lib/cn';
+import { labelJmdictPos } from '@renderer/lib/grammar';
+import {
+  loadDailyReviewState,
+  persistDailyReviewState,
+  todayLocalDate,
+  type DailyReviewState,
+} from '@renderer/lib/daily-review';
+import type { ReviewCardDto } from '@shared/ipc';
+import type { JmdictEntry } from '@shared/types/jmdict';
+
+type Rating = 1 | 2 | 3 | 4;
+
+interface RatingDef {
+  label: string;
+  hint: string;
+  key: '1' | '2' | '3' | '4';
+  className: string;
+}
+
+const RATINGS: Record<Rating, RatingDef> = {
+  1: {
+    label: 'Again',
+    hint: 'forgot',
+    key: '1',
+    className:
+      'border-[hsl(var(--srs-lapsed))]/40 text-[hsl(var(--srs-lapsed))] hover:bg-[hsl(var(--srs-lapsed))]/10',
+  },
+  2: {
+    label: 'Hard',
+    hint: 'struggled',
+    key: '2',
+    className:
+      'border-border/60 text-muted-foreground hover:bg-muted/30 hover:text-foreground',
+  },
+  3: {
+    label: 'Good',
+    hint: 'recalled',
+    key: '3',
+    className:
+      'border-foreground/40 text-foreground hover:bg-foreground hover:text-background',
+  },
+  4: {
+    label: 'Easy',
+    hint: 'instant',
+    key: '4',
+    className:
+      'border-[hsl(var(--srs-known))]/40 text-[hsl(var(--srs-known))] hover:bg-[hsl(var(--srs-known))]/10',
+  },
+};
+
+export function ReviewPage() {
+  const [queue, setQueue] = useState<ReviewCardDto[] | null>(null);
+  const [daily, setDaily] = useState<DailyReviewState>({
+    date: todayLocalDate(),
+    done: 0,
+  });
+  const [flipped, setFlipped] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadQueue = useCallback(async () => {
+    setError(null);
+    const [queueRes, capRes, dailyState] = await Promise.all([
+      window.api.getReviewQueue(),
+      window.api.getSetting('dailyReviewCap'),
+      loadDailyReviewState(),
+    ]);
+    if (!queueRes.ok) {
+      setError(queueRes.error);
+      return;
+    }
+    let cards = queueRes.data;
+    if (capRes.ok && capRes.data) {
+      const cap = Number(capRes.data);
+      if (Number.isFinite(cap) && cap > 0) {
+        const remaining = Math.max(0, cap - dailyState.done);
+        cards = cards.slice(0, remaining);
+      }
+    }
+    setDaily(dailyState);
+    setQueue(cards);
+    setFlipped(false);
+  }, []);
+
+  useEffect(() => {
+    void loadQueue();
+  }, [loadQueue]);
+
+  const current = queue?.[0] ?? null;
+
+  const onRate = useCallback(
+    async (rating: Rating) => {
+      if (!current || busy) return;
+      setBusy(true);
+      setError(null);
+      try {
+        const res = await window.api.submitReview({
+          wordId: current.wordId,
+          rating,
+        });
+        if (!res.ok) {
+          setError(res.error);
+          return;
+        }
+        setQueue((prev) => (prev ? prev.slice(1) : prev));
+        const next: DailyReviewState = {
+          date: todayLocalDate(),
+          done:
+            daily.date === todayLocalDate() ? daily.done + 1 : 1,
+        };
+        setDaily(next);
+        void persistDailyReviewState(next);
+        setFlipped(false);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [current, busy, daily],
+  );
+
+  // Keyboard: space flips, 1/2/3/4 rate
+  useEffect(() => {
+    if (!current) return;
+    const handler = (e: KeyboardEvent) => {
+      if (busy) return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+
+      if (!flipped && (e.key === ' ' || e.key === 'Enter')) {
+        e.preventDefault();
+        setFlipped(true);
+        return;
+      }
+      if (flipped && (e.key === '1' || e.key === '2' || e.key === '3' || e.key === '4')) {
+        e.preventDefault();
+        void onRate(Number(e.key) as Rating);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [current, flipped, busy, onRate]);
+
+  const totalDue = (queue?.length ?? 0) + daily.done;
+  const left = queue?.length ?? 0;
+
+  return (
+    <PageShell
+      eyebrow="復 · review"
+      title="Review"
+      subtitle="Recall the reading and meaning. Press space to flip."
+    >
+      {error ? (
+        <div
+          role="alert"
+          className="mb-6 rounded-md border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-accent"
+        >
+          {error}
+        </div>
+      ) : null}
+
+      {queue === null ? (
+        <CardSkeleton />
+      ) : current ? (
+        <>
+          <Counter total={totalDue} done={daily.done} left={left} />
+          <ReviewCard
+            card={current}
+            flipped={flipped}
+            onFlip={() => setFlipped(true)}
+            onRate={onRate}
+            busy={busy}
+          />
+        </>
+      ) : (
+        <EmptyState onRefresh={loadQueue} done={daily.done} />
+      )}
+    </PageShell>
+  );
+}
+
+function Counter({
+  total,
+  done,
+  left,
+}: {
+  total: number;
+  done: number;
+  left: number;
+}) {
+  return (
+    <div className="flex items-center justify-center gap-3 text-[10px] uppercase tracking-widest text-muted-foreground tabular-nums mb-8">
+      <span>{total} due</span>
+      <span className="text-muted-foreground/40">·</span>
+      <span className="text-foreground/80">{done} done</span>
+      <span className="text-muted-foreground/40">·</span>
+      <span>{left} left</span>
+    </div>
+  );
+}
+
+function ReviewCard({
+  card,
+  flipped,
+  onFlip,
+  onRate,
+  busy,
+}: {
+  card: ReviewCardDto;
+  flipped: boolean;
+  onFlip: () => void;
+  onRate: (r: Rating) => void;
+  busy: boolean;
+}) {
+  return (
+    <div className="space-y-8">
+      <article
+        key={`${card.wordId}-${flipped ? 'back' : 'front'}`}
+        className={cn(
+          'fade-rise',
+          'rounded-xl border border-border/60 bg-surface/40',
+          'px-12 py-16 min-h-[420px]',
+          'flex flex-col items-center justify-center text-center',
+          !flipped && 'cursor-pointer select-none',
+        )}
+        onClick={() => {
+          if (!flipped) onFlip();
+        }}
+      >
+        {flipped ? <CardBack card={card} /> : <CardFront card={card} />}
+      </article>
+
+      {flipped ? (
+        <RateBar onRate={onRate} busy={busy} />
+      ) : (
+        <div className="text-center text-[11px] uppercase tracking-widest text-muted-foreground/70">
+          press <kbd className="px-1 py-0.5 rounded bg-muted/40 text-foreground/80">space</kbd> to flip
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CardFront({ card }: { card: ReviewCardDto }) {
+  return (
+    <div className="space-y-12 max-w-xl">
+      <div className="font-display text-7xl tracking-tighter text-foreground leading-none">
+        {card.surface}
+      </div>
+      {card.firstSentence ? (
+        <div className="text-base text-muted-foreground italic leading-relaxed">
+          “{card.firstSentence}”
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function CardBack({ card }: { card: ReviewCardDto }) {
+  return (
+    <div className="space-y-8 max-w-xl">
+      <div>
+        <div className="font-display text-6xl tracking-tighter text-foreground leading-none">
+          {card.surface}
+        </div>
+        <div className="mt-3 flex items-center justify-center gap-3">
+          <span className="font-sans text-xl text-muted-foreground tracking-wide">
+            {card.reading}
+          </span>
+          <SpeakerButton text={card.surface} size="sm" />
+        </div>
+        {card.jlptLevel ? (
+          <div className="mt-4">
+            <span className="inline-flex items-center text-[10px] tracking-widest px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30">
+              N{card.jlptLevel}
+            </span>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="h-px w-16 bg-border/60 mx-auto" />
+
+      <Definitions entries={card.meanings} />
+
+      {card.firstSentence ? (
+        <>
+          <div className="h-px w-16 bg-border/60 mx-auto" />
+          <div className="text-sm text-muted-foreground italic leading-relaxed">
+            “{card.firstSentence}”
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function Definitions({ entries }: { entries: JmdictEntry[] }) {
+  if (entries.length === 0) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        No meanings captured for this word.
+      </div>
+    );
+  }
+  // Show all senses from the first entry only — cleaner card.
+  const first = entries[0];
+  if (!first) return null;
+  return (
+    <ol className="space-y-3 text-left max-w-md mx-auto">
+      {first.senses.slice(0, 4).map((sense, i) => (
+        <li key={i} className="text-sm leading-relaxed">
+          <div className="flex items-baseline gap-3">
+            <span className="font-display text-muted-foreground tabular-nums w-5 shrink-0 text-right">
+              {i + 1}.
+            </span>
+            <div className="flex-1 min-w-0">
+              {sense.pos.length > 0 ? (
+                <div className="text-[10px] uppercase tracking-widest text-muted-foreground/80 mb-0.5">
+                  {sense.pos.map(labelJmdictPos).join(' · ')}
+                </div>
+              ) : null}
+              <div className="text-foreground/90">
+                {sense.glosses.join('; ')}
+              </div>
+            </div>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function RateBar({
+  onRate,
+  busy,
+}: {
+  onRate: (r: Rating) => void;
+  busy: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {([1, 2, 3, 4] as const).map((r) => {
+        const def = RATINGS[r];
+        return (
+          <button
+            key={r}
+            type="button"
+            disabled={busy}
+            onClick={() => onRate(r)}
+            className={cn(
+              'flex flex-col items-center gap-1',
+              'px-3 py-3 rounded-lg border',
+              'transition-[background-color,color,transform] duration-150 ease-out-strong',
+              'active:scale-[0.97]',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              def.className,
+            )}
+          >
+            <span className="text-sm tracking-wide font-medium">
+              {def.label}
+            </span>
+            <span className="text-[10px] tracking-widest opacity-70">
+              {def.key} · {def.hint}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function CardSkeleton() {
+  return (
+    <div className="space-y-8 animate-pulse">
+      <div className="h-3 w-24 bg-muted/40 rounded mx-auto" />
+      <div className="rounded-xl border border-border/60 bg-surface/30 px-12 py-16 min-h-[420px]" />
+    </div>
+  );
+}
+
+function EmptyState({
+  onRefresh,
+  done,
+}: {
+  onRefresh: () => void;
+  done: number;
+}) {
+  return (
+    <div className="rounded-xl border border-dashed border-border/70 bg-surface/30 px-10 py-14 text-center">
+      <div className="font-display text-3xl tracking-tighter text-foreground mb-3">
+        {done > 0 ? 'All done.' : 'Nothing to review.'}
+      </div>
+      <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
+        {done > 0
+          ? `You finished ${done} review${done === 1 ? '' : 's'}. Come back tomorrow — or go read something and add new words.`
+          : 'Open the Read tab, paste some Japanese, and add a few words to your deck.'}
+      </p>
+      <button
+        type="button"
+        onClick={onRefresh}
+        className="
+          mt-7 inline-flex items-center gap-2
+          text-xs tracking-widest uppercase text-muted-foreground
+          hover:text-foreground transition-colors duration-150
+        "
+      >
+        refresh
+      </button>
+    </div>
+  );
+}
