@@ -125,7 +125,7 @@ function UpdateFooter({ status }: { status: ReturnType<typeof useUpdateStatus> }
 
   return (
     <div className="px-3 py-2 text-[10px] uppercase tracking-widest text-muted-foreground/60">
-      v0.1.0
+      v{__APP_VERSION__}
     </div>
   );
 }
