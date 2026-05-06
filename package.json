@@ -1,6 +1,6 @@
 {
   "name": "japanese-reading-companion",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "A local desktop app for reading Japanese with furigana and an SRS deck built from your own reading.",
   "private": true,
   "main": "out/main/index.js",
