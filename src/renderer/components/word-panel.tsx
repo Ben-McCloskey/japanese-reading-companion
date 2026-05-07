@@ -10,7 +10,15 @@ import {
   summarizeConjugation,
 } from '@renderer/lib/grammar';
 import { SRS_DOT, SRS_LABEL } from '@renderer/lib/srs-style';
+import {
+  loadDailyReviewState,
+  persistDailyReviewState,
+  todayLocalDate,
+} from '@renderer/lib/daily-review';
+import { RateBar, type Rating } from './rate-bar';
 import { SpeakerButton } from './speaker-button';
+
+const REVIEW_COOLDOWN_MS = 30 * 60 * 1000;
 
 interface WordPanelProps {
   token: Token | null;
@@ -125,6 +133,53 @@ export function WordPanel({
       setBusy(false);
     }
   }
+
+  async function onReview(rating: Rating) {
+    if (!deckEntry || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await window.api.submitReview({
+        wordId: deckEntry.wordId,
+        rating,
+      });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      // Bump the daily review counter the same way the Review page does.
+      const current = await loadDailyReviewState();
+      const today = todayLocalDate();
+      void persistDailyReviewState({
+        date: today,
+        done: current.date === today ? current.done + 1 : 1,
+      });
+      // Refresh the deck entry so the panel re-renders with the new state
+      // (which also hides the rate bar via the due-date / cooldown checks).
+      const refreshed = await window.api.getDeckStatesBatch({
+        keys: [{ surface: deckEntry.surface, reading: deckEntry.reading }],
+      });
+      if (refreshed.ok) {
+        onDeckChange(deckKey, refreshed.data[deckKey] ?? null);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const canReviewInline = (() => {
+    if (!deckEntry || deckEntry.state === 'known') return false;
+    if (!deckEntry.dueDate) return true;
+    const dueMs = new Date(deckEntry.dueDate).getTime();
+    if (Number.isNaN(dueMs) || dueMs > Date.now()) return false;
+    if (deckEntry.lastReviewedAt) {
+      const lastMs = new Date(deckEntry.lastReviewedAt).getTime();
+      if (!Number.isNaN(lastMs) && Date.now() - lastMs < REVIEW_COOLDOWN_MS) {
+        return false;
+      }
+    }
+    return true;
+  })();
 
   return (
     <aside
@@ -245,11 +300,16 @@ export function WordPanel({
         {data && !error ? (
           <div className="mt-9 pt-6 border-t border-border/60">
             {inDeck && deckEntry ? (
-              <DeckStatusRow
-                entry={deckEntry}
-                busy={busy}
-                onRemove={onRemove}
-              />
+              <>
+                <DeckStatusRow
+                  entry={deckEntry}
+                  busy={busy}
+                  onRemove={onRemove}
+                />
+                {canReviewInline ? (
+                  <InlineReview busy={busy} onReview={onReview} />
+                ) : null}
+              </>
             ) : (
               <DeckActions busy={busy} onAdd={onAdd} />
             )}
@@ -361,6 +421,23 @@ function DeckStatusRow({
           {busy ? 'Removing…' : 'Remove from deck'}
         </button>
       </div>
+    </div>
+  );
+}
+
+function InlineReview({
+  busy,
+  onReview,
+}: {
+  busy: boolean;
+  onReview: (r: Rating) => void;
+}) {
+  return (
+    <div className="mt-5 pt-5 border-t border-border/40">
+      <div className="text-[10px] uppercase tracking-widest text-muted-foreground/70 mb-2.5">
+        review · optional
+      </div>
+      <RateBar onRate={onReview} busy={busy} size="compact" />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { PageShell } from '@renderer/components/page-shell';
 import { SpeakerButton } from '@renderer/components/speaker-button';
+import { RateBar, type Rating } from '@renderer/components/rate-bar';
 import { cn } from '@renderer/lib/cn';
 import { labelJmdictPos } from '@renderer/lib/grammar';
 import {
@@ -11,46 +12,6 @@ import {
 } from '@renderer/lib/daily-review';
 import type { ReviewCardDto } from '@shared/ipc';
 import type { JmdictEntry } from '@shared/types/jmdict';
-
-type Rating = 1 | 2 | 3 | 4;
-
-interface RatingDef {
-  label: string;
-  hint: string;
-  key: '1' | '2' | '3' | '4';
-  className: string;
-}
-
-const RATINGS: Record<Rating, RatingDef> = {
-  1: {
-    label: 'Again',
-    hint: 'forgot',
-    key: '1',
-    className:
-      'border-[hsl(var(--srs-lapsed))]/40 text-[hsl(var(--srs-lapsed))] hover:bg-[hsl(var(--srs-lapsed))]/10',
-  },
-  2: {
-    label: 'Hard',
-    hint: 'struggled',
-    key: '2',
-    className:
-      'border-border/60 text-muted-foreground hover:bg-muted/30 hover:text-foreground',
-  },
-  3: {
-    label: 'Good',
-    hint: 'recalled',
-    key: '3',
-    className:
-      'border-foreground/40 text-foreground hover:bg-foreground hover:text-background',
-  },
-  4: {
-    label: 'Easy',
-    hint: 'instant',
-    key: '4',
-    className:
-      'border-[hsl(var(--srs-known))]/40 text-[hsl(var(--srs-known))] hover:bg-[hsl(var(--srs-known))]/10',
-  },
-};
 
 export function ReviewPage() {
   const [queue, setQueue] = useState<ReviewCardDto[] | null>(null);
@@ -330,45 +291,6 @@ function Definitions({ entries }: { entries: JmdictEntry[] }) {
         </li>
       ))}
     </ol>
-  );
-}
-
-function RateBar({
-  onRate,
-  busy,
-}: {
-  onRate: (r: Rating) => void;
-  busy: boolean;
-}) {
-  return (
-    <div className="grid grid-cols-4 gap-2">
-      {([1, 2, 3, 4] as const).map((r) => {
-        const def = RATINGS[r];
-        return (
-          <button
-            key={r}
-            type="button"
-            disabled={busy}
-            onClick={() => onRate(r)}
-            className={cn(
-              'flex flex-col items-center gap-1',
-              'px-3 py-3 rounded-lg border',
-              'transition-[background-color,color,transform] duration-150 ease-out-strong',
-              'active:scale-[0.97]',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-              def.className,
-            )}
-          >
-            <span className="text-sm tracking-wide font-medium">
-              {def.label}
-            </span>
-            <span className="text-[10px] tracking-widest opacity-70">
-              {def.key} · {def.hint}
-            </span>
-          </button>
-        );
-      })}
-    </div>
   );
 }
 

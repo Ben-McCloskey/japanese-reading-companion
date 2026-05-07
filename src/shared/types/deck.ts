@@ -1,12 +1,14 @@
 export type SrsState = 'new' | 'learning' | 'review' | 'lapsed' | 'known';
 
 export interface DeckEntry {
+  wordId: number;
   surface: string;       // dictionary form
   reading: string;       // hiragana reading
   state: SrsState;
   dueDate: string | null;
   reviewCount: number;
   lapseCount: number;
+  lastReviewedAt: string | null;
   jlptLevel: number | null;
   firstSentence: string | null;
 }

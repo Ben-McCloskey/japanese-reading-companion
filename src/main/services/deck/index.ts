@@ -23,12 +23,14 @@ interface DeckDeps {
 
 function rowToEntry(row: SrsKeyedRow): DeckEntry {
   return {
+    wordId: row.word_id,
     surface: row.surface,
     reading: row.reading,
     state: row.state as SrsState,
     dueDate: row.due_date,
     reviewCount: row.review_count,
     lapseCount: row.lapse_count,
+    lastReviewedAt: row.last_reviewed_at,
     jlptLevel: row.jlpt_level,
     firstSentence: row.first_sentence,
   };
