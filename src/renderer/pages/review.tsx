@@ -7,6 +7,7 @@ import { labelJmdictPos } from '@renderer/lib/grammar';
 import {
   loadDailyReviewState,
   persistDailyReviewState,
+  resolveDailyCap,
   todayLocalDate,
   type DailyReviewState,
 } from '@renderer/lib/daily-review';
@@ -36,12 +37,10 @@ export function ReviewPage() {
       return;
     }
     let cards = queueRes.data;
-    if (capRes.ok && capRes.data) {
-      const cap = Number(capRes.data);
-      if (Number.isFinite(cap) && cap > 0) {
-        const remaining = Math.max(0, cap - dailyState.done);
-        cards = cards.slice(0, remaining);
-      }
+    const cap = resolveDailyCap(capRes.ok ? capRes.data : null);
+    if (cap > 0) {
+      const remaining = Math.max(0, cap - dailyState.done);
+      cards = cards.slice(0, remaining);
     }
     setDaily(dailyState);
     setQueue(cards);

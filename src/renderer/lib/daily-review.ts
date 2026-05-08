@@ -3,6 +3,18 @@ import { api } from '@platform';
 const DATE_KEY = 'reviewsDoneDate';
 const COUNT_KEY = 'reviewsDoneCount';
 
+export const DEFAULT_REVIEW_CAP = 20;
+
+/**
+ * `null`/missing → DEFAULT_REVIEW_CAP. `"0"` → 0 (caller treats as unlimited).
+ */
+export function resolveDailyCap(raw: string | null | undefined): number {
+  if (raw == null) return DEFAULT_REVIEW_CAP;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return DEFAULT_REVIEW_CAP;
+  return Math.floor(n);
+}
+
 export interface DailyReviewState {
   /** YYYY-MM-DD in local time. */
   date: string;

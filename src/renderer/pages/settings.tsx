@@ -3,11 +3,11 @@ import { PageShell } from '@renderer/components/page-shell';
 import { Toggle } from '@renderer/components/ui/toggle';
 import { applyTheme, persistTheme, type Theme } from '@renderer/lib/theme';
 import { setPreferredVoiceUri, useTts } from '@renderer/lib/tts';
+import { DEFAULT_REVIEW_CAP } from '@renderer/lib/daily-review';
 import { api } from '@platform';
 import type { SyncInfo, SyncStatus } from '@shared/ipc';
 
 const REVIEW_CAP_KEY = 'dailyReviewCap';
-const DEFAULT_REVIEW_CAP = 20;
 
 export function SettingsPage() {
   const [theme, setTheme] = useState<Theme>(() =>
