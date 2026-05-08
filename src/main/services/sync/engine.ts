@@ -132,7 +132,6 @@ export function createSyncEngine(deps: EngineDeps): SyncEngine {
           // One bad event shouldn't stall the whole stream. The peer cursor
           // still advances so we don't loop on it forever — we'll find the
           // gap if dependent events later need a missing prerequisite.
-          // eslint-disable-next-line no-console
           console.error('[sync] replay failed for', event.id, e);
         }
         if (event.id > lastApplied) lastApplied = event.id;
