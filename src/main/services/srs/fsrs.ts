@@ -7,7 +7,7 @@ import {
   type Grade,
 } from 'ts-fsrs';
 import type { SrsState } from '@shared/types/deck';
-import type { SrsRow } from '@main/db/repos/srs-repo';
+import type { SrsRow } from '@shared/types/srs';
 
 const scheduler = makeFsrs(generatorParameters());
 

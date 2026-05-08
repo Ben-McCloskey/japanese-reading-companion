@@ -1,3 +1,5 @@
+import { api } from '@platform';
+
 export type Theme = 'light' | 'dark';
 
 const SETTING_KEY = 'theme';
@@ -13,11 +15,11 @@ export function isTheme(value: string | null): value is Theme {
 }
 
 export async function loadInitialTheme(): Promise<Theme> {
-  const res = await window.api.getSetting(SETTING_KEY);
+  const res = await api.getSetting(SETTING_KEY);
   if (res.ok && isTheme(res.data)) return res.data;
   return 'dark';
 }
 
 export async function persistTheme(theme: Theme): Promise<void> {
-  await window.api.setSetting(SETTING_KEY, theme);
+  await api.setSetting(SETTING_KEY, theme);
 }

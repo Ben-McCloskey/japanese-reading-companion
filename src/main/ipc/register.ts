@@ -42,6 +42,12 @@ import {
   type UpdateStatus,
   type UpdateStatusResponse,
   type UpdateInstallResponse,
+  type SyncInfoResponse,
+  type SyncRunResponse,
+  type SyncSetFolderRequest,
+  type SyncSetFolderResponse,
+  type SyncResetResponse,
+  type SyncBackfillResponse,
 } from '@shared/ipc';
 import type { Token } from '@shared/types/tokenizer';
 import { ok, err } from '@shared/result';
@@ -55,6 +61,12 @@ import { quitAndInstall } from '@main/services/auto-updater';
 import type { DeckService } from '@main/services/deck';
 import type { ReviewService } from '@main/services/review';
 import type { TokenizerService } from '@main/services/tokenizer';
+import type { EventLog } from '@main/services/sync/event-log';
+import type { SyncEngine } from '@main/services/sync/engine';
+import type { SyncEventsRepo } from '@main/db/repos/sync-events-repo';
+import type { SrsRepo } from '@main/db/repos/srs-repo';
+import { runBackfill } from '@main/services/sync/backfill';
+import { SYNCED_SETTING_KEYS } from '@shared/types/sync';
 import { importJmdict } from '@main/services/dictionary/importer';
 import { importJlpt } from '@main/services/dictionary/jlpt-importer';
 import { lookupWord } from '@main/services/dictionary/lookup';
@@ -62,6 +74,18 @@ import { broadcast } from './events';
 
 function safeError(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+function collectWordKeys(
+  words: WordsRepo,
+  ids: number[],
+): Array<{ surface: string; reading: string }> {
+  const keys: Array<{ surface: string; reading: string }> = [];
+  for (const id of ids) {
+    const row = words.getById(id);
+    if (row) keys.push({ surface: row.surface, reading: row.reading });
+  }
+  return keys;
 }
 
 export interface IpcDeps {
@@ -74,6 +98,11 @@ export interface IpcDeps {
   review: ReviewService;
   tokenizer: TokenizerService;
   appearances: AppearancesService;
+  eventLog: EventLog;
+  syncEngine: SyncEngine;
+  syncEventsRepo: SyncEventsRepo;
+  srs: SrsRepo;
+  db: import('better-sqlite3').Database;
   getUpdateStatus: () => UpdateStatus;
 }
 
@@ -113,6 +142,13 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     async (_e, req: SettingsSetRequest): Promise<SettingsSetResponse> => {
       try {
         deps.settings.set(req.key, req.value);
+        if (SYNCED_SETTING_KEYS.has(req.key)) {
+          deps.eventLog.append('settings.set', {
+            key: req.key,
+            value: req.value,
+          });
+          deps.syncEngine.notifyLocalChange();
+        }
         return ok(undefined);
       } catch (e) {
         return err(safeError(e));
@@ -214,6 +250,12 @@ export function registerIpcHandlers(deps: IpcDeps): void {
         // Recompute per-session appearance counts so the My Words list stays
         // accurate when a session is re-tokenized with different text.
         deps.appearances.syncForSession(id, req.tokens);
+        deps.eventLog.append('session.save', {
+          rawText: req.rawText,
+          tokens: req.tokens,
+          createdAt: new Date().toISOString(),
+        });
+        deps.syncEngine.notifyLocalChange();
         return ok({ id });
       } catch (e) {
         return err(safeError(e));
@@ -236,6 +278,22 @@ export function registerIpcHandlers(deps: IpcDeps): void {
           firstSentence: req.firstSentence,
           ...(req.asKnown != null ? { asKnown: req.asKnown } : {}),
         });
+        // Resolve session by raw_text so peers can replay against their own
+        // local session id (which may differ).
+        const firstSessionRawText = req.sessionId != null
+          ? deps.sessions.get(req.sessionId)?.raw_text ?? null
+          : null;
+        deps.eventLog.append('word.add', {
+          surface: req.surface,
+          reading: req.reading,
+          jlptLevel: req.jlptLevel,
+          pos: req.pos,
+          meanings: req.meanings,
+          firstSentence: req.firstSentence,
+          firstSessionRawText,
+          asKnown: req.asKnown ?? false,
+        });
+        deps.syncEngine.notifyLocalChange();
         return ok(entry);
       } catch (e) {
         return err(safeError(e));
@@ -248,6 +306,11 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     async (_e, req: DeckRemoveRequest): Promise<DeckRemoveResponse> => {
       try {
         deps.deck.removeWord(req.surface, req.reading);
+        deps.eventLog.append('word.remove', {
+          surface: req.surface,
+          reading: req.reading,
+        });
+        deps.syncEngine.notifyLocalChange();
         return ok(undefined);
       } catch (e) {
         return err(safeError(e));
@@ -310,6 +373,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
           wordId: req.wordId,
           rating: req.rating,
         });
+        deps.syncEngine.notifyLocalChange();
         return ok(result);
       } catch (e) {
         return err(safeError(e));
@@ -333,7 +397,13 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     IPC.WORDS_BULK_DELETE,
     async (_e, req: WordsBulkRequest): Promise<WordsBulkResponse> => {
       try {
-        return ok({ count: deps.words.bulkRemove(req.ids) });
+        const keys = collectWordKeys(deps.words, req.ids);
+        const count = deps.words.bulkRemove(req.ids);
+        if (keys.length > 0) {
+          deps.eventLog.append('words.bulk-delete', { keys });
+          deps.syncEngine.notifyLocalChange();
+        }
+        return ok({ count });
       } catch (e) {
         return err(safeError(e));
       }
@@ -344,7 +414,13 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     IPC.WORDS_BULK_MARK_KNOWN,
     async (_e, req: WordsBulkRequest): Promise<WordsBulkResponse> => {
       try {
-        return ok({ count: deps.words.bulkMarkKnown(req.ids) });
+        const keys = collectWordKeys(deps.words, req.ids);
+        const count = deps.words.bulkMarkKnown(req.ids);
+        if (keys.length > 0) {
+          deps.eventLog.append('words.bulk-mark-known', { keys });
+          deps.syncEngine.notifyLocalChange();
+        }
+        return ok({ count });
       } catch (e) {
         return err(safeError(e));
       }
@@ -393,7 +469,12 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     IPC.SESSION_DELETE,
     async (_e, req: SessionDeleteRequest): Promise<SessionDeleteResponse> => {
       try {
+        const row = deps.sessions.get(req.id);
         deps.sessions.remove(req.id);
+        if (row) {
+          deps.eventLog.append('session.delete', { rawText: row.raw_text });
+          deps.syncEngine.notifyLocalChange();
+        }
         return ok(undefined);
       } catch (e) {
         return err(safeError(e));
@@ -419,6 +500,77 @@ export function registerIpcHandlers(deps: IpcDeps): void {
       try {
         quitAndInstall();
         return ok(undefined);
+      } catch (e) {
+        return err(safeError(e));
+      }
+    },
+  );
+
+  // sync ------------------------------------------------------------------
+  ipcMain.handle(IPC.SYNC_INFO, async (): Promise<SyncInfoResponse> => {
+    try {
+      const lastPushed = deps.settings.get('syncLastPushedId') ?? '';
+      const pendingPushCount = deps.syncEventsRepo.countLocalSince(
+        deps.eventLog.deviceId,
+        lastPushed,
+      );
+      return ok({
+        deviceId: deps.eventLog.deviceId,
+        folder: deps.syncEngine.resolvedFolder(),
+        status: deps.syncEngine.status(),
+        peers: deps.syncEngine.peers(),
+        pendingPushCount,
+      });
+    } catch (e) {
+      return err(safeError(e));
+    }
+  });
+
+  ipcMain.handle(IPC.SYNC_RUN, async (): Promise<SyncRunResponse> => {
+    try {
+      await deps.syncEngine.run();
+      return ok(undefined);
+    } catch (e) {
+      return err(safeError(e));
+    }
+  });
+
+  ipcMain.handle(
+    IPC.SYNC_SET_FOLDER,
+    async (_e, req: SyncSetFolderRequest): Promise<SyncSetFolderResponse> => {
+      try {
+        await deps.syncEngine.setFolder(req.folder);
+        return ok(undefined);
+      } catch (e) {
+        return err(safeError(e));
+      }
+    },
+  );
+
+  ipcMain.handle(IPC.SYNC_RESET, async (): Promise<SyncResetResponse> => {
+    try {
+      deps.syncEngine.reset();
+      await deps.syncEngine.run();
+      return ok(undefined);
+    } catch (e) {
+      return err(safeError(e));
+    }
+  });
+
+  ipcMain.handle(
+    IPC.SYNC_BACKFILL,
+    async (): Promise<SyncBackfillResponse> => {
+      try {
+        const result = runBackfill({
+          db: deps.db,
+          sessions: deps.sessions,
+          words: deps.words,
+          srs: deps.srs,
+          eventLog: deps.eventLog,
+        });
+        // Kick off a sync so the new events push to the iCloud folder.
+        await deps.syncEngine.run();
+        return ok(result);
       } catch (e) {
         return err(safeError(e));
       }

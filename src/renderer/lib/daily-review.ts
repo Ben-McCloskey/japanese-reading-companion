@@ -1,3 +1,5 @@
+import { api } from '@platform';
+
 const DATE_KEY = 'reviewsDoneDate';
 const COUNT_KEY = 'reviewsDoneCount';
 
@@ -25,8 +27,8 @@ export function todayLocalDate(): string {
 export async function loadDailyReviewState(): Promise<DailyReviewState> {
   const today = todayLocalDate();
   const [dateRes, countRes] = await Promise.all([
-    window.api.getSetting(DATE_KEY),
-    window.api.getSetting(COUNT_KEY),
+    api.getSetting(DATE_KEY),
+    api.getSetting(COUNT_KEY),
   ]);
   const storedDate = dateRes.ok && dateRes.data ? dateRes.data : null;
   if (storedDate !== today) return { date: today, done: 0 };
@@ -38,7 +40,7 @@ export async function persistDailyReviewState(
   state: DailyReviewState,
 ): Promise<void> {
   await Promise.all([
-    window.api.setSetting(DATE_KEY, state.date),
-    window.api.setSetting(COUNT_KEY, String(state.done)),
+    api.setSetting(DATE_KEY, state.date),
+    api.setSetting(COUNT_KEY, String(state.done)),
   ]);
 }

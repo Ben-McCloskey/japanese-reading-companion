@@ -27,6 +27,12 @@ import {
   type TokenizerStatus,
   type TokenizerStatusResponse,
   type TokenizeResponse,
+  type SyncStatus,
+  type SyncInfoResponse,
+  type SyncRunResponse,
+  type SyncSetFolderResponse,
+  type SyncResetResponse,
+  type SyncBackfillResponse,
 } from '@shared/ipc';
 import type { Api, Unsubscribe } from '@shared/api';
 
@@ -101,6 +107,21 @@ const api: Api = {
     const handler = (_e: IpcRendererEvent, status: UpdateStatus) => cb(status);
     ipcRenderer.on(IPC.UPDATE_STATUS_EVENT, handler);
     return () => ipcRenderer.off(IPC.UPDATE_STATUS_EVENT, handler);
+  },
+
+  getSyncInfo: (): Promise<SyncInfoResponse> =>
+    ipcRenderer.invoke(IPC.SYNC_INFO),
+  runSync: (): Promise<SyncRunResponse> => ipcRenderer.invoke(IPC.SYNC_RUN),
+  setSyncFolder: (req): Promise<SyncSetFolderResponse> =>
+    ipcRenderer.invoke(IPC.SYNC_SET_FOLDER, req),
+  resetSync: (): Promise<SyncResetResponse> =>
+    ipcRenderer.invoke(IPC.SYNC_RESET),
+  backfillSync: (): Promise<SyncBackfillResponse> =>
+    ipcRenderer.invoke(IPC.SYNC_BACKFILL),
+  onSyncStatus: (cb: (s: SyncStatus) => void): Unsubscribe => {
+    const handler = (_e: IpcRendererEvent, status: SyncStatus) => cb(status);
+    ipcRenderer.on(IPC.SYNC_STATUS_EVENT, handler);
+    return () => ipcRenderer.off(IPC.SYNC_STATUS_EVENT, handler);
   },
 };
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { PageShell } from '@renderer/components/page-shell';
 import { cn } from '@renderer/lib/cn';
+import { api } from '@platform';
 import type { SessionListItem } from '@shared/types/sessions';
 
 interface SessionsPageProps {
@@ -14,7 +15,7 @@ export function SessionsPage({ onOpenSession }: SessionsPageProps) {
 
   const load = useCallback(async () => {
     setError(null);
-    const res = await window.api.listSessions();
+    const res = await api.listSessions();
     if (res.ok) setItems(res.data);
     else setError(res.error);
   }, []);
@@ -25,7 +26,7 @@ export function SessionsPage({ onOpenSession }: SessionsPageProps) {
 
   async function onDelete(id: number) {
     if (pendingDelete === id) {
-      const res = await window.api.deleteSession({ id });
+      const res = await api.deleteSession({ id });
       if (res.ok) void load();
       else setError(res.error);
       setPendingDelete(null);

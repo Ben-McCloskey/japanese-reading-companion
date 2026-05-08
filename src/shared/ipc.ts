@@ -40,6 +40,13 @@ export const IPC = {
   UPDATE_STATUS: 'update:status',
   UPDATE_STATUS_EVENT: 'update:status-event',
   UPDATE_INSTALL: 'update:install',
+
+  SYNC_INFO: 'sync:info',
+  SYNC_RUN: 'sync:run',
+  SYNC_SET_FOLDER: 'sync:set-folder',
+  SYNC_RESET: 'sync:reset',
+  SYNC_BACKFILL: 'sync:backfill',
+  SYNC_STATUS_EVENT: 'sync:status-event',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -90,7 +97,10 @@ export type WordLookupResponse = Result<WordLookupHit | null>;
 
 // tokenizer --------------------------------------------------------------
 export type TokenizerStatus =
-  | { kind: 'warming' }
+  // `loaded` / `total` are populated by the iOS Capacitor build (so the
+  // user sees download progress while kuromoji's dict trie inflates).
+  // The Electron build emits warming without those fields.
+  | { kind: 'warming'; loaded?: number; total?: number }
   | { kind: 'ready' }
   | { kind: 'failed'; error: string };
 
@@ -197,3 +207,31 @@ export type UpdateStatus =
 
 export type UpdateStatusResponse = Result<UpdateStatus>;
 export type UpdateInstallResponse = Result<void>;
+
+// sync ------------------------------------------------------------------
+export type SyncStatus =
+  | { kind: 'idle' }
+  | { kind: 'pushing' }
+  | { kind: 'pulling' }
+  | { kind: 'error'; error: string };
+
+export interface SyncPeerInfo {
+  deviceId: string;
+  lastEventId: string;
+  lastSeenAt: string;
+}
+
+export interface SyncInfo {
+  deviceId: string;
+  folder: string;
+  status: SyncStatus;
+  peers: SyncPeerInfo[];
+  pendingPushCount: number;
+}
+
+export type SyncInfoResponse = Result<SyncInfo>;
+export type SyncRunResponse = Result<void>;
+export type SyncSetFolderRequest = { folder: string | null };
+export type SyncSetFolderResponse = Result<void>;
+export type SyncResetResponse = Result<void>;
+export type SyncBackfillResponse = Result<{ sessions: number; words: number }>;

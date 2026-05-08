@@ -113,6 +113,14 @@ export function createWordsRepo(db: Database) {
     return findByKey.get({ surface, reading }) ?? null;
   }
 
+  const findById = db.prepare<{ id: number }, WordRow>(
+    'SELECT * FROM words WHERE id = @id',
+  );
+
+  function getById(id: number): WordRow | null {
+    return findById.get({ id }) ?? null;
+  }
+
   // ----- list / bulk operations -----------------------------------------
 
   function list(filter: WordListFilter = {}): WordListItem[] {
@@ -240,6 +248,7 @@ export function createWordsRepo(db: Database) {
   return {
     upsert,
     getByKey,
+    getById,
     remove(id: number): void {
       remove.run({ id });
     },

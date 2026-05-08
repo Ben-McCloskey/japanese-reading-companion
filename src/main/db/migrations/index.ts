@@ -2,6 +2,7 @@ import type { Database } from 'better-sqlite3';
 import migration0001 from './0001_init.sql?raw';
 import migration0002 from './0002_app_tables.sql?raw';
 import migration0003 from './0003_appearances.sql?raw';
+import migration0004 from './0004_sync_events.sql?raw';
 
 type Migration = { version: number; name: string; sql: string };
 
@@ -9,6 +10,7 @@ const MIGRATIONS: Migration[] = [
   { version: 1, name: '0001_init', sql: migration0001 },
   { version: 2, name: '0002_app_tables', sql: migration0002 },
   { version: 3, name: '0003_appearances', sql: migration0003 },
+  { version: 4, name: '0004_sync_events', sql: migration0004 },
 ];
 
 const BOOKKEEPING_SQL = `

@@ -9,3 +9,12 @@ release/
 *.tsbuildinfo
 .env*
 *.tmp
+
+# Capacitor / iOS
+ios/App/Pods/
+ios/App/Podfile.lock
+ios/App/App/public/
+ios/App/build/
+ios/DerivedData/
+*.xcuserdata/
+*.xcuserstate

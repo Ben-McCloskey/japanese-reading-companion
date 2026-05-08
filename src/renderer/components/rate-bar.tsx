@@ -60,8 +60,12 @@ export function RateBar({ onRate, busy, size = 'default' }: RateBarProps) {
             disabled={busy}
             onClick={() => onRate(r)}
             className={cn(
-              'flex flex-col items-center',
-              compact ? 'gap-0.5 px-2 py-2 rounded-md' : 'gap-1 px-3 py-3 rounded-lg',
+              'flex flex-col items-center justify-center',
+              // Touch-sized on mobile (44pt+ Apple HIG), compact on desktop
+              // when used inline in the lookup panel.
+              compact
+                ? 'gap-0.5 px-2 py-2.5 md:py-2 rounded-md min-h-[44px] md:min-h-0'
+                : 'gap-1 px-3 py-4 md:py-3 rounded-lg min-h-[56px] md:min-h-0',
               'border',
               'transition-[background-color,color,transform] duration-150 ease-out-strong',
               'active:scale-[0.97]',
@@ -72,7 +76,7 @@ export function RateBar({ onRate, busy, size = 'default' }: RateBarProps) {
             <span
               className={cn(
                 'tracking-wide font-medium',
-                compact ? 'text-xs' : 'text-sm',
+                compact ? 'text-xs' : 'text-[15px] md:text-sm',
               )}
             >
               {def.label}
@@ -83,7 +87,9 @@ export function RateBar({ onRate, busy, size = 'default' }: RateBarProps) {
               </span>
             ) : (
               <span className="text-[10px] tracking-widest opacity-70">
-                {def.key} · {def.hint}
+                {/* Keyboard hint is desktop-only; on touch it's noise. */}
+                <span className="hidden md:inline">{def.key} · </span>
+                {def.hint}
               </span>
             )}
           </button>

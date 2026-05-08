@@ -13,6 +13,10 @@ import { createReviewsRepo } from './db/repos/reviews-repo';
 import { createReviewService } from './services/review';
 import { createAppearancesRepo } from './db/repos/appearances-repo';
 import { createAppearancesService } from './services/appearances';
+import { createSyncEventsRepo } from './db/repos/sync-events-repo';
+import { createEventLog, ensureDeviceId } from './services/sync/event-log';
+import { createEventReplayer } from './services/sync/event-replay';
+import { createSyncEngine } from './services/sync/engine';
 import { startAutoUpdater } from './services/auto-updater';
 import { createTokenizerService } from './services/tokenizer';
 import type { UpdateStatus } from '@shared/ipc';
@@ -75,8 +79,29 @@ void app.whenReady().then(() => {
     appearances: appearancesRepo,
   });
   const deck = createDeckService({ words, srs, appearances });
-  const review = createReviewService({ db, srs, reviews });
+  const syncEventsRepo = createSyncEventsRepo(db);
+  const deviceId = ensureDeviceId(settings);
+  const eventLog = createEventLog({ deviceId, syncEvents: syncEventsRepo });
+  const review = createReviewService({ db, srs, reviews, words, eventLog });
   const tokenizer = createTokenizerService();
+
+  const replayer = createEventReplayer({
+    db,
+    settings,
+    words,
+    sessions,
+    srs,
+    reviews,
+    deck,
+    appearances,
+  });
+  const syncEngine = createSyncEngine({
+    syncEvents: syncEventsRepo,
+    settings,
+    replayer,
+    deviceId,
+    onStatusChange: (status) => broadcast(IPC.SYNC_STATUS_EVENT, status),
+  });
 
   let lastUpdateStatus: UpdateStatus = { kind: 'idle' };
 
@@ -90,8 +115,15 @@ void app.whenReady().then(() => {
     review,
     tokenizer,
     appearances,
+    eventLog,
+    syncEngine,
+    syncEventsRepo,
+    srs,
+    db,
     getUpdateStatus: () => lastUpdateStatus,
   });
+
+  syncEngine.start();
 
   // Auto-updater is a no-op in dev (electron-updater short-circuits when the
   // app isn't packaged). In production it polls GitHub Releases for new tags.
@@ -126,3 +158,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   closeDb();
 });
+
+// Engine is stopped by closeDb-adjacent cleanup paths if the app process
+// goes away while a run is in flight; the worst case is that pendingPushCount
+// shows >0 next launch and the next push catches up.

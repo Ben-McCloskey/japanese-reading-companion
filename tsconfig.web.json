@@ -17,13 +17,16 @@
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["src/shared/*"],
-      "@renderer/*": ["src/renderer/*"]
+      "@renderer/*": ["src/renderer/*"],
+      "@platform": ["src/platform/index.ts"],
+      "@platform/*": ["src/platform/*"]
     }
   },
   "include": [
     "src/renderer/**/*.ts",
     "src/renderer/**/*.tsx",
     "src/renderer/**/*.d.ts",
-    "src/shared/**/*.ts"
+    "src/shared/**/*.ts",
+    "src/platform/**/*.ts"
   ]
 }

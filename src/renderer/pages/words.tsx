@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageShell } from '@renderer/components/page-shell';
 import { cn } from '@renderer/lib/cn';
 import { SRS_DOT, SRS_LABEL } from '@renderer/lib/srs-style';
+import { api } from '@platform';
 import type { SrsState, WordListFilter, WordListItem } from '@shared/types/deck';
 
 const ALL_STATES: SrsState[] = ['new', 'learning', 'review', 'lapsed', 'known'];
@@ -17,7 +18,7 @@ export function WordsPage() {
   const load = useCallback(async (f: WordListFilter) => {
     setLoading(true);
     setError(null);
-    const res = await window.api.listWords(f);
+    const res = await api.listWords(f);
     if (res.ok) {
       setItems(res.data);
       // Drop selections that aren't in the new list.
@@ -72,7 +73,7 @@ export function WordsPage() {
 
   async function bulkMarkKnown() {
     if (selected.size === 0) return;
-    const res = await window.api.bulkMarkWordsKnown({
+    const res = await api.bulkMarkWordsKnown({
       ids: Array.from(selected),
     });
     if (res.ok) {
@@ -85,7 +86,7 @@ export function WordsPage() {
 
   async function bulkDelete() {
     if (selected.size === 0) return;
-    const res = await window.api.bulkDeleteWords({
+    const res = await api.bulkDeleteWords({
       ids: Array.from(selected),
     });
     if (res.ok) {
@@ -312,8 +313,17 @@ function HeaderRow({
   allSelected: boolean;
   onToggleAll: () => void;
 }) {
+  // Phone-width screens stack the row metadata under the word, so the
+  // multi-column header makes no sense there. We just show the toggle-all
+  // affordance with a "select all" hint. Desktop keeps the tabular header.
   return (
-    <div className="grid grid-cols-[2.25rem_1fr_5rem_4rem_4rem_5rem] items-center gap-x-4 px-4 py-2.5 bg-surface/40 border-b border-border/50">
+    <div
+      className="
+        flex md:grid md:grid-cols-[2.25rem_1fr_5rem_4rem_4rem_5rem]
+        items-center gap-x-4 px-4 py-2.5
+        bg-surface/40 border-b border-border/50
+      "
+    >
       <input
         type="checkbox"
         checked={allSelected}
@@ -321,19 +331,19 @@ function HeaderRow({
         className="h-3.5 w-3.5 accent-accent cursor-pointer"
         aria-label="Toggle select all"
       />
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+      <div className="ml-3 md:ml-0 text-[10px] uppercase tracking-widest text-muted-foreground">
         word
       </div>
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+      <div className="hidden md:block text-[10px] uppercase tracking-widest text-muted-foreground">
         status
       </div>
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground tabular-nums">
+      <div className="hidden md:block text-[10px] uppercase tracking-widest text-muted-foreground tabular-nums">
         seen
       </div>
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground tabular-nums">
+      <div className="hidden md:block text-[10px] uppercase tracking-widest text-muted-foreground tabular-nums">
         reviews
       </div>
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground tabular-nums">
+      <div className="hidden md:block text-[10px] uppercase tracking-widest text-muted-foreground tabular-nums">
         due
       </div>
     </div>
@@ -349,10 +359,19 @@ function Row({
   selected: boolean;
   onToggle: () => void;
 }) {
+  const dueLabel = formatDue(word.dueDate, word.state);
+
+  // Two-column outer grid on every viewport: the checkbox is its own track,
+  // and the rest takes 1fr. On desktop, the rest is itself a 5-column grid
+  // (using `display: contents` so the inner wrapper disappears from layout
+  // and its children become direct grid items of the outer track).
+  // On mobile, the inner wrapper is just a flex stack — word/status on top,
+  // metadata wrapping below, all readable at phone width.
   return (
     <li
       className={cn(
-        'grid grid-cols-[2.25rem_1fr_5rem_4rem_4rem_5rem] items-center gap-x-4 px-4 py-3',
+        'grid grid-cols-[2.25rem_1fr] items-start gap-x-3 px-3 md:px-4 py-3',
+        'md:grid-cols-[2.25rem_1fr_5rem_4rem_4rem_5rem] md:gap-x-4 md:items-center',
         'transition-colors duration-100',
         selected ? 'bg-accent/[0.07]' : 'hover:bg-muted/20',
       )}
@@ -361,23 +380,57 @@ function Row({
         type="checkbox"
         checked={selected}
         onChange={onToggle}
-        className="h-3.5 w-3.5 accent-accent cursor-pointer"
+        className="h-3.5 w-3.5 accent-accent cursor-pointer mt-1.5 md:mt-0"
         aria-label={`Select ${word.surface}`}
       />
+
+      {/* Word + reading. On desktop this is the 1fr column; on mobile it
+          renders the surface alongside an inline status pip on the right. */}
       <div className="min-w-0">
-        <div className="font-display text-lg text-foreground leading-tight truncate">
-          {word.surface}
-          {word.jlptLevel ? (
-            <span className="ml-2 text-[10px] tracking-widest text-accent">
-              N{word.jlptLevel}
+        <div className="flex items-baseline justify-between gap-3 md:block">
+          <div className="font-display text-lg text-foreground leading-tight truncate">
+            {word.surface}
+            {word.jlptLevel ? (
+              <span className="ml-2 text-[10px] tracking-widest text-accent">
+                N{word.jlptLevel}
+              </span>
+            ) : null}
+          </div>
+          {/* Mobile-only inline status. Desktop reads it from its own grid
+              column further right. */}
+          <span
+            className="md:hidden flex items-center gap-1.5 text-xs shrink-0"
+            aria-hidden
+          >
+            <span
+              className={cn('h-1.5 w-1.5 rounded-full', SRS_DOT[word.state])}
+            />
+            <span className="text-foreground/80 capitalize">
+              {SRS_LABEL[word.state]}
             </span>
-          ) : null}
+          </span>
         </div>
         <div className="text-xs text-muted-foreground truncate">
           {word.reading}
         </div>
+        {/* Mobile-only metadata strip. Hidden on desktop in favor of the
+            tabular columns. */}
+        <div className="md:hidden mt-1 flex items-center gap-2 text-[11px] text-muted-foreground/80 tabular-nums flex-wrap">
+          <span title={`Seen ${word.seenCount} times`}>
+            seen {word.seenCount}
+          </span>
+          <span className="text-muted-foreground/40">·</span>
+          <span>
+            {word.reviewCount} review{word.reviewCount === 1 ? '' : 's'}
+          </span>
+          <span className="text-muted-foreground/40">·</span>
+          <span>due {dueLabel}</span>
+        </div>
       </div>
-      <div className="flex items-center gap-2 text-xs">
+
+      {/* Desktop tabular columns. Hidden on mobile (the strip above carries
+          the same info in a stacked form). */}
+      <div className="hidden md:flex items-center gap-2 text-xs">
         <span
           className={cn('h-1.5 w-1.5 rounded-full', SRS_DOT[word.state])}
           aria-hidden
@@ -387,16 +440,16 @@ function Row({
         </span>
       </div>
       <div
-        className="text-xs text-muted-foreground tabular-nums"
+        className="hidden md:block text-xs text-muted-foreground tabular-nums"
         title={`Seen ${word.seenCount} time${word.seenCount === 1 ? '' : 's'} across all sessions`}
       >
         {word.seenCount}
       </div>
-      <div className="text-xs text-muted-foreground tabular-nums">
+      <div className="hidden md:block text-xs text-muted-foreground tabular-nums">
         {word.reviewCount}
       </div>
-      <div className="text-xs text-muted-foreground tabular-nums">
-        {formatDue(word.dueDate, word.state)}
+      <div className="hidden md:block text-xs text-muted-foreground tabular-nums">
+        {dueLabel}
       </div>
     </li>
   );

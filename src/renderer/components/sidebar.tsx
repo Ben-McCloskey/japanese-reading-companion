@@ -1,5 +1,6 @@
 import { cn } from '@renderer/lib/cn';
 import { useUpdateStatus } from '@renderer/lib/update-status';
+import { api } from '@platform';
 import type { Route } from '@renderer/types/route';
 
 const NAV: ReadonlyArray<{ route: Route; label: string; jp: string }> = [
@@ -19,10 +20,10 @@ export function Sidebar({ current, onSelect }: SidebarProps) {
   const updateStatus = useUpdateStatus();
 
   return (
-    <aside className="w-56 shrink-0 border-r border-border/70 bg-surface/40 flex flex-col">
+    <aside className="hidden md:flex w-56 shrink-0 border-r border-border/70 bg-surface/40 flex-col">
       {/* Empty drag region — leaves the macOS traffic lights an unobstructed
           row to live in. Wordmark sits below, out of their way. */}
-      <div className="titlebar-drag h-11" />
+      <div className="title-spacer" />
 
       <div className="px-6 pt-1 pb-3">
         <span className="font-display text-[13px] tracking-widest text-muted-foreground/70 select-none">
@@ -84,7 +85,7 @@ function UpdateFooter({ status }: { status: ReturnType<typeof useUpdateStatus> }
     return (
       <button
         type="button"
-        onClick={() => void window.api.installUpdate()}
+        onClick={() => void api.installUpdate()}
         className="
           fade-rise w-full text-left
           rounded-md border border-accent/40 bg-accent/[0.08]

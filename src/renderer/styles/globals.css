@@ -105,14 +105,46 @@
     opacity: 0;
     transition: opacity 140ms ease;
   }
-  .ruby-base [role='button']:hover rt,
+  /* Active selection (panel open) reveals furigana on every device — this is
+     how iOS gets "tap a word, see its reading" without :hover. */
   .ruby-base [role='button']:focus-visible rt,
   .ruby-base [role='button'][aria-pressed='true'] rt {
     opacity: 1;
   }
+  /* :hover only on devices that actually have a real hover state. iOS Safari
+     fires :hover on the first tap and leaves it sticky, which would pin the
+     furigana visible until you tap somewhere else — exactly the wrong UX. */
+  @media (hover: hover) and (pointer: fine) {
+    .ruby-base [role='button']:hover rt {
+      opacity: 1;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .ruby-base rt {
       transition-duration: 0ms;
+    }
+  }
+
+  /* Title spacer — Electron leaves room for the macOS hidden-titlebar drag
+     region; Capacitor uses the iOS notch's safe-area inset instead. The
+     `data-platform="capacitor"` attribute is set on <html> by main.tsx. */
+  .title-spacer {
+    height: 2.75rem; /* Electron / desktop default = h-11 */
+    -webkit-app-region: drag;
+  }
+  html[data-platform='capacitor'] .title-spacer {
+    height: env(safe-area-inset-top, 0px);
+    -webkit-app-region: unset;
+  }
+
+  /* Pads the bottom of scrolling regions so content can't hide under the
+     fixed bottom tab bar (mobile only). */
+  .pb-tabbar {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+  }
+  @media (min-width: 768px) {
+    .pb-tabbar {
+      padding-bottom: 0;
     }
   }
 }

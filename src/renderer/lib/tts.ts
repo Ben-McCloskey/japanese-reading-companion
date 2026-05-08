@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { api } from '@platform';
 
 const PREF_KEY = 'ttsVoice';
 const RATE = 0.85;
@@ -32,14 +33,14 @@ function notify() {
 async function loadPreferred(): Promise<void> {
   if (preferredLoaded) return;
   preferredLoaded = true;
-  const res = await window.api.getSetting(PREF_KEY);
+  const res = await api.getSetting(PREF_KEY);
   if (res.ok && res.data) preferredUri = res.data;
   notify();
 }
 
 export function setPreferredVoiceUri(uri: string | null): void {
   preferredUri = uri;
-  void window.api.setSetting(PREF_KEY, uri ?? '');
+  void api.setSetting(PREF_KEY, uri ?? '');
   notify();
 }
 

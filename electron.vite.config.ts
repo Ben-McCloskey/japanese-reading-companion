@@ -50,6 +50,7 @@ export default defineConfig({
       alias: {
         '@shared': resolve(__dirname, 'src/shared'),
         '@renderer': resolve(__dirname, 'src/renderer'),
+        '@platform': resolve(__dirname, 'src/platform'),
       },
     },
   },

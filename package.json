@@ -7,6 +7,9 @@
   "scripts": {
     "dev": "env -u ELECTRON_RUN_AS_NODE electron-vite dev",
     "build": "electron-vite build",
+    "build:web": "vite build --config vite.web.config.ts",
+    "ios:sync": "npm run build:web && cap sync ios",
+    "ios:open": "cap open ios",
     "package": "npm run build && env -u ELECTRON_RUN_AS_NODE PYTHON_PATH=/opt/homebrew/bin/python3.12 electron-builder",
     "release": "npm run build && env -u ELECTRON_RUN_AS_NODE PYTHON_PATH=/opt/homebrew/bin/python3.12 electron-builder --publish always",
     "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
@@ -16,18 +19,26 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
+    "@capacitor-community/sqlite": "^6.0.2",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/filesystem": "^6.0.4",
+    "@capacitor/ios": "^6.2.1",
+    "@capacitor/preferences": "^6.0.4",
     "better-sqlite3": "^11.5.0",
     "electron-updater": "^6.8.3",
     "kuromoji": "^0.1.2",
+    "pako": "^2.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "sax": "^1.6.0",
     "ts-fsrs": "^5.3.2"
   },
   "devDependencies": {
+    "@capacitor/cli": "^6.2.1",
     "@types/better-sqlite3": "^7.6.11",
     "@types/kuromoji": "^0.1.3",
     "@types/node": "^22.7.4",
+    "@types/pako": "^2.0.4",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "@types/sax": "^1.2.7",

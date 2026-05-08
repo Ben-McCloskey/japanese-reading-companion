@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Sidebar } from './components/sidebar';
+import { BottomTabs } from './components/bottom-tabs';
 import { ReadPage } from './pages/read';
 import { ReviewPage } from './pages/review';
 import { SessionsPage } from './pages/sessions';
@@ -7,6 +8,7 @@ import { WordsPage } from './pages/words';
 import { SettingsPage } from './pages/settings';
 import { SetupPage } from './pages/setup';
 import { useDictStatus } from './lib/dict-status';
+import { api } from '@platform';
 import type { Route } from './types/route';
 
 export function App() {
@@ -61,7 +63,7 @@ export function App() {
           <SetupPage
             status={dictStatus}
             onImport={() => {
-              void window.api.importDict();
+              void api.importDict();
             }}
           />
         </main>
@@ -86,6 +88,7 @@ export function App() {
         {route === 'words' ? <WordsPage /> : null}
         {route === 'settings' ? <SettingsPage /> : null}
       </main>
+      <BottomTabs current={route} onSelect={setRoute} />
     </div>
   );
 }

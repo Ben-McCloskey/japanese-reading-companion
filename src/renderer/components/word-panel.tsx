@@ -17,6 +17,7 @@ import {
 } from '@renderer/lib/daily-review';
 import { RateBar, type Rating } from './rate-bar';
 import { SpeakerButton } from './speaker-button';
+import { api } from '@platform';
 
 const REVIEW_COOLDOWN_MS = 30 * 60 * 1000;
 
@@ -69,7 +70,7 @@ export function WordPanel({
     setError(null);
     setData(null);
 
-    void window.api
+    void api
       .lookupWord({
         surface: token.surface,
         basicForm: token.basicForm,
@@ -101,7 +102,7 @@ export function WordPanel({
     setBusy(true);
     setError(null);
     try {
-      const res = await window.api.addToDeck({
+      const res = await api.addToDeck({
         surface: token.basicForm,
         reading: reading || token.basicForm,
         jlptLevel: data.jlptLevel,
@@ -123,7 +124,7 @@ export function WordPanel({
     setBusy(true);
     setError(null);
     try {
-      const res = await window.api.removeFromDeck({
+      const res = await api.removeFromDeck({
         surface: token.basicForm,
         reading: reading || token.basicForm,
       });
@@ -139,7 +140,7 @@ export function WordPanel({
     setBusy(true);
     setError(null);
     try {
-      const res = await window.api.submitReview({
+      const res = await api.submitReview({
         wordId: deckEntry.wordId,
         rating,
       });
@@ -156,7 +157,7 @@ export function WordPanel({
       });
       // Refresh the deck entry so the panel re-renders with the new state
       // (which also hides the rate bar via the due-date / cooldown checks).
-      const refreshed = await window.api.getDeckStatesBatch({
+      const refreshed = await api.getDeckStatesBatch({
         keys: [{ surface: deckEntry.surface, reading: deckEntry.reading }],
       });
       if (refreshed.ok) {
@@ -185,13 +186,25 @@ export function WordPanel({
     <aside
       className={cn(
         'panel-enter',
-        'h-full w-[400px] shrink-0',
-        'border-l border-border/70 bg-surface/40',
+        // Mobile: full-screen overlay above everything (including the bottom
+        // tabs) so the user can focus on the word. Tap × to close back to
+        // reading. Slides in from the right via panel-enter.
+        'fixed inset-0 z-50 bg-background',
+        // Desktop: side panel docked to the right of the reading view.
+        'md:static md:inset-auto md:h-full md:w-[400px] md:shrink-0 md:z-auto',
+        'md:border-l md:border-border/70 md:bg-surface/40',
         'flex flex-col',
       )}
     >
-      <div className="titlebar-drag h-11" />
-      <div className="flex-1 overflow-auto px-7 pb-12">
+      <div className="title-spacer" />
+      <div
+        className="
+          flex-1 overflow-auto
+          px-5 md:px-7
+          pt-2 md:pt-0
+          pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] md:pb-12
+        "
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">

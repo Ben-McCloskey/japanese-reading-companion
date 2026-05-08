@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { api } from '@platform';
 import type { TokenizerStatus } from '@shared/ipc';
 
 export function useTokenizerStatus(): TokenizerStatus {
@@ -6,10 +7,10 @@ export function useTokenizerStatus(): TokenizerStatus {
 
   useEffect(() => {
     let cancelled = false;
-    void window.api.getTokenizerStatus().then((res) => {
+    void api.getTokenizerStatus().then((res) => {
       if (!cancelled && res.ok) setStatus(res.data);
     });
-    const off = window.api.onTokenizerReady((s) => setStatus(s));
+    const off = api.onTokenizerReady((s) => setStatus(s));
     return () => {
       cancelled = true;
       off();

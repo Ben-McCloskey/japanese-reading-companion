@@ -10,6 +10,7 @@ import {
   todayLocalDate,
   type DailyReviewState,
 } from '@renderer/lib/daily-review';
+import { api } from '@platform';
 import type { ReviewCardDto } from '@shared/ipc';
 import type { JmdictEntry } from '@shared/types/jmdict';
 
@@ -26,8 +27,8 @@ export function ReviewPage() {
   const loadQueue = useCallback(async () => {
     setError(null);
     const [queueRes, capRes, dailyState] = await Promise.all([
-      window.api.getReviewQueue(),
-      window.api.getSetting('dailyReviewCap'),
+      api.getReviewQueue(),
+      api.getSetting('dailyReviewCap'),
       loadDailyReviewState(),
     ]);
     if (!queueRes.ok) {
@@ -59,7 +60,7 @@ export function ReviewPage() {
       setBusy(true);
       setError(null);
       try {
-        const res = await window.api.submitReview({
+        const res = await api.submitReview({
           wordId: current.wordId,
           rating,
         });
@@ -153,7 +154,7 @@ function Counter({
   left: number;
 }) {
   return (
-    <div className="flex items-center justify-center gap-3 text-[10px] uppercase tracking-widest text-muted-foreground tabular-nums mb-8">
+    <div className="flex items-center justify-center gap-3 text-[10px] uppercase tracking-widest text-muted-foreground tabular-nums mb-5 md:mb-8">
       <span>{total} due</span>
       <span className="text-muted-foreground/40">·</span>
       <span className="text-foreground/80">{done} done</span>
@@ -177,13 +178,16 @@ function ReviewCard({
   busy: boolean;
 }) {
   return (
-    <div className="space-y-8">
+    <div className="space-y-5 md:space-y-8">
       <article
         key={`${card.wordId}-${flipped ? 'back' : 'front'}`}
         className={cn(
           'fade-rise',
           'rounded-xl border border-border/60 bg-surface/40',
-          'px-12 py-16 min-h-[420px]',
+          // Mobile: more compact so the rate bar lands in thumb reach
+          // without scrolling. Desktop keeps the generous "card on a wall"
+          // proportions.
+          'px-6 py-9 min-h-[280px] md:px-12 md:py-16 md:min-h-[420px]',
           'flex flex-col items-center justify-center text-center',
           !flipped && 'cursor-pointer select-none',
         )}
@@ -198,7 +202,11 @@ function ReviewCard({
         <RateBar onRate={onRate} busy={busy} />
       ) : (
         <div className="text-center text-[11px] uppercase tracking-widest text-muted-foreground/70">
-          press <kbd className="px-1 py-0.5 rounded bg-muted/40 text-foreground/80">space</kbd> to flip
+          {/* On touch devices the keyboard hint is meaningless. */}
+          <span className="hidden md:inline">
+            press <kbd className="px-1 py-0.5 rounded bg-muted/40 text-foreground/80">space</kbd> to flip
+          </span>
+          <span className="md:hidden">tap card to flip</span>
         </div>
       )}
     </div>
@@ -207,12 +215,12 @@ function ReviewCard({
 
 function CardFront({ card }: { card: ReviewCardDto }) {
   return (
-    <div className="space-y-12 max-w-xl">
-      <div className="font-display text-7xl tracking-tighter text-foreground leading-none">
+    <div className="space-y-7 md:space-y-12 max-w-xl">
+      <div className="font-display text-5xl md:text-7xl tracking-tighter text-foreground leading-none break-words">
         {card.surface}
       </div>
       {card.firstSentence ? (
-        <div className="text-base text-muted-foreground italic leading-relaxed">
+        <div className="text-sm md:text-base text-muted-foreground italic leading-relaxed">
           “{card.firstSentence}”
         </div>
       ) : null}
@@ -222,9 +230,9 @@ function CardFront({ card }: { card: ReviewCardDto }) {
 
 function CardBack({ card }: { card: ReviewCardDto }) {
   return (
-    <div className="space-y-8 max-w-xl">
+    <div className="space-y-6 md:space-y-8 max-w-xl">
       <div>
-        <div className="font-display text-6xl tracking-tighter text-foreground leading-none">
+        <div className="font-display text-4xl md:text-6xl tracking-tighter text-foreground leading-none break-words">
           {card.surface}
         </div>
         <div className="mt-3 flex items-center justify-center gap-3">
@@ -296,9 +304,9 @@ function Definitions({ entries }: { entries: JmdictEntry[] }) {
 
 function CardSkeleton() {
   return (
-    <div className="space-y-8 animate-pulse">
+    <div className="space-y-5 md:space-y-8 animate-pulse">
       <div className="h-3 w-24 bg-muted/40 rounded mx-auto" />
-      <div className="rounded-xl border border-border/60 bg-surface/30 px-12 py-16 min-h-[420px]" />
+      <div className="rounded-xl border border-border/60 bg-surface/30 px-6 py-9 min-h-[280px] md:px-12 md:py-16 md:min-h-[420px]" />
     </div>
   );
 }

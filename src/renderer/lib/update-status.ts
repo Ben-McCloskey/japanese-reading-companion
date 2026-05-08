@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { api } from '@platform';
 import type { UpdateStatus } from '@shared/ipc';
 
 export function useUpdateStatus(): UpdateStatus {
@@ -6,10 +7,10 @@ export function useUpdateStatus(): UpdateStatus {
 
   useEffect(() => {
     let cancelled = false;
-    void window.api.getUpdateStatus().then((res) => {
+    void api.getUpdateStatus().then((res) => {
       if (!cancelled && res.ok) setStatus(res.data);
     });
-    const off = window.api.onUpdateStatus((s) => setStatus(s));
+    const off = api.onUpdateStatus((s) => setStatus(s));
     return () => {
       cancelled = true;
       off();

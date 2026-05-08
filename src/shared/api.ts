@@ -36,6 +36,13 @@ import type {
   UpdateStatus,
   UpdateStatusResponse,
   UpdateInstallResponse,
+  SyncStatus,
+  SyncInfoResponse,
+  SyncRunResponse,
+  SyncSetFolderRequest,
+  SyncSetFolderResponse,
+  SyncResetResponse,
+  SyncBackfillResponse,
 } from './ipc';
 
 export type Unsubscribe = () => void;
@@ -84,4 +91,12 @@ export interface Api {
   getUpdateStatus(): Promise<UpdateStatusResponse>;
   installUpdate(): Promise<UpdateInstallResponse>;
   onUpdateStatus(cb: (status: UpdateStatus) => void): Unsubscribe;
+
+  // sync
+  getSyncInfo(): Promise<SyncInfoResponse>;
+  runSync(): Promise<SyncRunResponse>;
+  setSyncFolder(req: SyncSetFolderRequest): Promise<SyncSetFolderResponse>;
+  resetSync(): Promise<SyncResetResponse>;
+  backfillSync(): Promise<SyncBackfillResponse>;
+  onSyncStatus(cb: (status: SyncStatus) => void): Unsubscribe;
 }

@@ -6,6 +6,7 @@ import { useTokenizerStatus } from '@renderer/lib/tokenizer-status';
 import { sentenceAt } from '@renderer/lib/sentence';
 import { katakanaToHiragana } from '@renderer/lib/kana';
 import { isLookupSkippable } from '@renderer/lib/grammar';
+import { api } from '@platform';
 import type { Token } from '@shared/types/tokenizer';
 import type { DeckEntry } from '@shared/types/deck';
 
@@ -38,14 +39,14 @@ export function ReadPage({
     if (pendingSessionId == null) return;
     let cancelled = false;
     void (async () => {
-      const res = await window.api.getSession({ id: pendingSessionId });
+      const res = await api.getSession({ id: pendingSessionId });
       if (cancelled) return;
       if (res.ok && res.data) {
         setText(res.data.rawText);
         setTokens(res.data.tokens);
         setSessionId(res.data.id);
         setSelectedIndex(null);
-        const deckRes = await window.api.getDeckStatesBatch({
+        const deckRes = await api.getDeckStatesBatch({
           keys: uniqueDeckKeys(res.data.tokens),
         });
         if (!cancelled && deckRes.ok) setDeckStates(deckRes.data);
@@ -64,7 +65,7 @@ export function ReadPage({
     setError(null);
     setSelectedIndex(null);
     try {
-      const tokRes = await window.api.tokenize(input);
+      const tokRes = await api.tokenize(input);
       if (!tokRes.ok) {
         setError(tokRes.error);
         return;
@@ -75,8 +76,8 @@ export function ReadPage({
       // Persist session and refresh deck states for the new token list. Both
       // run in parallel — they don't depend on each other.
       const [sessionRes, deckRes] = await Promise.all([
-        window.api.saveSession({ rawText: input, tokens: newTokens }),
-        window.api.getDeckStatesBatch({
+        api.saveSession({ rawText: input, tokens: newTokens }),
+        api.getDeckStatesBatch({
           keys: uniqueDeckKeys(newTokens),
         }),
       ]);
@@ -235,6 +236,12 @@ export function ReadPage({
                   <span className="text-accent">
                     Tokenizer failed: {tokStatus.error}
                   </span>
+                ) : tokStatus.kind === 'warming' &&
+                  tokStatus.total != null &&
+                  tokStatus.loaded != null ? (
+                  <>
+                    Warming kuromoji… {tokStatus.loaded}/{tokStatus.total}
+                  </>
                 ) : (
                   <>Warming kuromoji…</>
                 )}
@@ -270,7 +277,7 @@ export function ReadPage({
           {tokens ? (
             <article
               key={tokens.length}
-              className="fade-rise mt-12 rounded-lg border border-border/60 bg-surface/30 px-8 py-10"
+              className="fade-rise mt-8 md:mt-12 rounded-lg border border-border/60 bg-surface/30 px-5 py-7 md:px-8 md:py-10"
             >
               <ReadingText
                 tokens={tokens}

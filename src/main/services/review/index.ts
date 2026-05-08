@@ -3,7 +3,9 @@ import type { JmdictEntry } from '@shared/types/jmdict';
 import type { SrsState } from '@shared/types/deck';
 import type { SrsRepo } from '@main/db/repos/srs-repo';
 import type { ReviewsRepo } from '@main/db/repos/reviews-repo';
+import type { WordsRepo } from '@main/db/repos/words-repo';
 import { applyRating, type FsrsRating } from '@main/services/srs/fsrs';
+import type { EventLog } from '@main/services/sync/event-log';
 
 export interface ReviewCard {
   wordId: number;
@@ -29,6 +31,8 @@ interface ReviewDeps {
   db: Database;
   srs: SrsRepo;
   reviews: ReviewsRepo;
+  words?: WordsRepo;
+  eventLog?: EventLog;
 }
 
 export function createReviewService(deps: ReviewDeps) {
@@ -60,6 +64,30 @@ export function createReviewService(deps: ReviewDeps) {
         stability_after: result.stabilityAfter,
         reviewed_at: now.toISOString(),
       });
+
+      // Replicate the review to peers. We capture the resulting SRS state in
+      // the event payload so peers don't have to re-run FSRS — they may have
+      // diverged state and would compute different results.
+      const word = deps.words?.getById(args.wordId);
+      if (deps.eventLog && word) {
+        deps.eventLog.append('review.submit', {
+          word: { surface: word.surface, reading: word.reading },
+          rating: args.rating,
+          reviewedAt: now.toISOString(),
+          result: {
+            state: result.state,
+            dueDate: result.due_date,
+            stability: result.stability,
+            difficulty: result.difficulty,
+            reviewCount: result.review_count,
+            lapseCount: result.lapse_count,
+            intervalBefore: result.intervalBefore,
+            intervalAfter: result.intervalAfter,
+            stabilityBefore: result.stabilityBefore,
+            stabilityAfter: result.stabilityAfter,
+          },
+        });
+      }
 
       return {
         wordId: args.wordId,

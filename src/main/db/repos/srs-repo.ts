@@ -1,16 +1,8 @@
 import type { Database } from 'better-sqlite3';
 import type { SrsState } from '@shared/types/deck';
+import type { SrsRow } from '@shared/types/srs';
 
-export interface SrsRow {
-  word_id: number;
-  state: SrsState;
-  due_date: string | null;
-  stability: number;
-  difficulty: number;
-  review_count: number;
-  lapse_count: number;
-  last_reviewed_at: string | null;
-}
+export type { SrsRow };
 
 export interface SrsKeyedRow extends SrsRow {
   surface: string;
