@@ -10,11 +10,6 @@ import {
   summarizeConjugation,
 } from '@renderer/lib/grammar';
 import { SRS_DOT, SRS_LABEL } from '@renderer/lib/srs-style';
-import {
-  loadDailyReviewState,
-  persistDailyReviewState,
-  todayLocalDate,
-} from '@renderer/lib/daily-review';
 import { RateBar, type Rating } from './rate-bar';
 import { SpeakerButton } from './speaker-button';
 import { api } from '@platform';
@@ -148,13 +143,6 @@ export function WordPanel({
         setError(res.error);
         return;
       }
-      // Bump the daily review counter the same way the Review page does.
-      const current = await loadDailyReviewState();
-      const today = todayLocalDate();
-      void persistDailyReviewState({
-        date: today,
-        done: current.date === today ? current.done + 1 : 1,
-      });
       // Refresh the deck entry so the panel re-renders with the new state
       // (which also hides the rate bar via the due-date / cooldown checks).
       const refreshed = await api.getDeckStatesBatch({

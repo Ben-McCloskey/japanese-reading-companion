@@ -113,6 +113,7 @@ void app.whenReady().then(() => {
     words,
     deck,
     review,
+    reviews,
     tokenizer,
     appearances,
     eventLog,

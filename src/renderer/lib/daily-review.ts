@@ -1,8 +1,5 @@
 import { api } from '@platform';
 
-const DATE_KEY = 'reviewsDoneDate';
-const COUNT_KEY = 'reviewsDoneCount';
-
 export const DEFAULT_REVIEW_CAP = 20;
 
 /**
@@ -18,7 +15,7 @@ export function resolveDailyCap(raw: string | null | undefined): number {
 export interface DailyReviewState {
   /** YYYY-MM-DD in local time. */
   date: string;
-  /** How many cards have been rated today. */
+  /** How many cards have been rated today across all synced devices. */
   done: number;
 }
 
@@ -31,28 +28,21 @@ export function todayLocalDate(): string {
   return `${y}-${m}-${day}`;
 }
 
-/**
- * Load the persisted "reviews done today" counter. If the persisted date is
- * older than today, returns a fresh state for today. Caller is responsible
- * for persisting the new state on first rating.
- */
-export async function loadDailyReviewState(): Promise<DailyReviewState> {
-  const today = todayLocalDate();
-  const [dateRes, countRes] = await Promise.all([
-    api.getSetting(DATE_KEY),
-    api.getSetting(COUNT_KEY),
-  ]);
-  const storedDate = dateRes.ok && dateRes.data ? dateRes.data : null;
-  if (storedDate !== today) return { date: today, done: 0 };
-  const raw = countRes.ok && countRes.data ? Number(countRes.data) : 0;
-  return { date: today, done: Number.isFinite(raw) ? raw : 0 };
+/** UTC instant for the start of today in the user's local timezone. */
+function localMidnightIso(): string {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString();
 }
 
-export async function persistDailyReviewState(
-  state: DailyReviewState,
-): Promise<void> {
-  await Promise.all([
-    api.setSetting(DATE_KEY, state.date),
-    api.setSetting(COUNT_KEY, String(state.done)),
-  ]);
+/**
+ * Counts every review (local + replayed from peers) since today's local
+ * midnight by querying the `reviews` table. Replayers on both platforms
+ * insert into that table for incoming review events, so this naturally
+ * reflects cross-device totals once sync converges.
+ */
+export async function loadDailyReviewState(): Promise<DailyReviewState> {
+  const date = todayLocalDate();
+  const res = await api.getTodayReviewCount({ sinceIso: localMidnightIso() });
+  const done = res.ok ? res.data.count : 0;
+  return { date, done };
 }

@@ -725,6 +725,15 @@ export const capacitorApi: Api = {
       };
     }),
 
+  getTodayReviewCount: (req) =>
+    tryAsync(async () => {
+      const row = await queryOne<{ n: number }>(
+        'SELECT COUNT(*) AS n FROM reviews WHERE reviewed_at >= ?',
+        [req.sinceIso],
+      );
+      return { count: row?.n ?? 0 };
+    }),
+
   // words list --------------------------------------------------------------
   listWords: (filter: WordListFilter) =>
     tryAsync(async () => {

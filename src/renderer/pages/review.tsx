@@ -6,7 +6,6 @@ import { cn } from '@renderer/lib/cn';
 import { labelJmdictPos } from '@renderer/lib/grammar';
 import {
   loadDailyReviewState,
-  persistDailyReviewState,
   resolveDailyCap,
   todayLocalDate,
   type DailyReviewState,
@@ -68,19 +67,14 @@ export function ReviewPage() {
           return;
         }
         setQueue((prev) => (prev ? prev.slice(1) : prev));
-        const next: DailyReviewState = {
-          date: todayLocalDate(),
-          done:
-            daily.date === todayLocalDate() ? daily.done + 1 : 1,
-        };
+        const next = await loadDailyReviewState();
         setDaily(next);
-        void persistDailyReviewState(next);
         setFlipped(false);
       } finally {
         setBusy(false);
       }
     },
-    [current, busy, daily],
+    [current, busy],
   );
 
   // Keyboard: space flips, 1/2/3/4 rate

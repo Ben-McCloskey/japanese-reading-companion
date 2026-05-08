@@ -105,8 +105,8 @@ export interface SyncEvent<K extends SyncEventKind = SyncEventKind> {
 }
 
 /**
- * Settings keys whose changes are replicated. Other keys (deviceId,
- * reviewsDoneDate, reviewsDoneCount) stay device-local.
+ * Settings keys whose changes are replicated. Other keys (e.g. deviceId)
+ * stay device-local.
  */
 export const SYNCED_SETTING_KEYS = new Set<string>([
   'theme',

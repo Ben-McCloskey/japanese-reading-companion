@@ -16,6 +16,7 @@ import {
   type DeckStatesBatchResponse,
   type ReviewQueueResponse,
   type ReviewSubmitResponse,
+  type TodayReviewCountResponse,
   type WordsListResponse,
   type WordsBulkResponse,
   type SessionsListResponse,
@@ -84,6 +85,8 @@ const api: Api = {
     ipcRenderer.invoke(IPC.REVIEW_QUEUE),
   submitReview: (req): Promise<ReviewSubmitResponse> =>
     ipcRenderer.invoke(IPC.REVIEW_SUBMIT, req),
+  getTodayReviewCount: (req): Promise<TodayReviewCountResponse> =>
+    ipcRenderer.invoke(IPC.REVIEW_TODAY_COUNT, req),
 
   listWords: (req): Promise<WordsListResponse> =>
     ipcRenderer.invoke(IPC.WORDS_LIST, req),

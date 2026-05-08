@@ -30,6 +30,8 @@ import {
   type ReviewQueueResponse,
   type ReviewSubmitRequest,
   type ReviewSubmitResponse,
+  type TodayReviewCountRequest,
+  type TodayReviewCountResponse,
   type WordsListRequest,
   type WordsListResponse,
   type WordsBulkRequest,
@@ -60,6 +62,7 @@ import type { AppearancesService } from '@main/services/appearances';
 import { quitAndInstall } from '@main/services/auto-updater';
 import type { DeckService } from '@main/services/deck';
 import type { ReviewService } from '@main/services/review';
+import type { ReviewsRepo } from '@main/db/repos/reviews-repo';
 import type { TokenizerService } from '@main/services/tokenizer';
 import type { EventLog } from '@main/services/sync/event-log';
 import type { SyncEngine } from '@main/services/sync/engine';
@@ -96,6 +99,7 @@ export interface IpcDeps {
   words: WordsRepo;
   deck: DeckService;
   review: ReviewService;
+  reviews: ReviewsRepo;
   tokenizer: TokenizerService;
   appearances: AppearancesService;
   eventLog: EventLog;
@@ -375,6 +379,20 @@ export function registerIpcHandlers(deps: IpcDeps): void {
         });
         deps.syncEngine.notifyLocalChange();
         return ok(result);
+      } catch (e) {
+        return err(safeError(e));
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC.REVIEW_TODAY_COUNT,
+    async (
+      _e,
+      req: TodayReviewCountRequest,
+    ): Promise<TodayReviewCountResponse> => {
+      try {
+        return ok({ count: deps.reviews.countSince(req.sinceIso) });
       } catch (e) {
         return err(safeError(e));
       }

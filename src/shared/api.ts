@@ -24,6 +24,8 @@ import type {
   ReviewQueueResponse,
   ReviewSubmitRequest,
   ReviewSubmitResponse,
+  TodayReviewCountRequest,
+  TodayReviewCountResponse,
   WordsListRequest,
   WordsListResponse,
   WordsBulkRequest,
@@ -76,6 +78,7 @@ export interface Api {
   // review
   getReviewQueue(): Promise<ReviewQueueResponse>;
   submitReview(req: ReviewSubmitRequest): Promise<ReviewSubmitResponse>;
+  getTodayReviewCount(req: TodayReviewCountRequest): Promise<TodayReviewCountResponse>;
 
   // words list
   listWords(req: WordsListRequest): Promise<WordsListResponse>;

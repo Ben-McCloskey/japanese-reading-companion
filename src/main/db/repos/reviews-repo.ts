@@ -23,9 +23,16 @@ export function createReviewsRepo(db: Database) {
      )`,
   );
 
+  const countSinceStmt = db.prepare<{ since: string }, { n: number }>(
+    'SELECT COUNT(*) AS n FROM reviews WHERE reviewed_at >= @since',
+  );
+
   return {
     log(entry: ReviewLogInsert): void {
       insert.run(entry);
+    },
+    countSince(iso: string): number {
+      return countSinceStmt.get({ since: iso })?.n ?? 0;
     },
   };
 }

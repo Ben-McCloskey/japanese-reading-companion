@@ -28,6 +28,7 @@ export const IPC = {
 
   REVIEW_QUEUE: 'review:queue',
   REVIEW_SUBMIT: 'review:submit',
+  REVIEW_TODAY_COUNT: 'review:today-count',
 
   WORDS_LIST: 'words:list',
   WORDS_BULK_DELETE: 'words:bulk-delete',
@@ -174,6 +175,12 @@ export interface ReviewSubmitResult {
 }
 
 export type ReviewSubmitResponse = Result<ReviewSubmitResult>;
+
+export interface TodayReviewCountRequest {
+  /** ISO timestamp at the start of the user's local day. */
+  sinceIso: string;
+}
+export type TodayReviewCountResponse = Result<{ count: number }>;
 
 // words list -------------------------------------------------------------
 export type WordsListRequest = WordListFilter;
