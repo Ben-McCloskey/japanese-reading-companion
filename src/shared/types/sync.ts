@@ -43,7 +43,7 @@ export interface WordAddPayload {
   };
 }
 
-export interface WordRemovePayload extends WordKey {}
+export type WordRemovePayload = WordKey;
 
 export interface ReviewSubmitPayload {
   word: WordKey;

@@ -13,7 +13,7 @@
     "package": "npm run build && env -u ELECTRON_RUN_AS_NODE PYTHON_PATH=/opt/homebrew/bin/python3.12 electron-builder",
     "release": "npm run build && env -u ELECTRON_RUN_AS_NODE PYTHON_PATH=/opt/homebrew/bin/python3.12 electron-builder --publish always",
     "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint .",
     "test": "vitest run",
     "db:reset": "tsx src/main/scripts/db-reset.ts",
     "postinstall": "electron-builder install-app-deps"

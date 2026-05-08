@@ -150,7 +150,7 @@ export function createCapacitorSyncEngine(): CapacitorSyncEngine {
           try {
             await applyEvent(event);
           } catch (e) {
-            // eslint-disable-next-line no-console
+             
             console.error('[sync] replay failed for', event.id, e);
           }
         }
@@ -175,7 +175,7 @@ export function createCapacitorSyncEngine(): CapacitorSyncEngine {
     // Diagnostic: surface tight cycling. If we're getting hammered, log
     // the call stack so the offending code path is identifiable.
     if (cycleEntryCount % 10 === 0) {
-      // eslint-disable-next-line no-console
+       
       console.warn(
         `[sync] runCycle entered ${cycleEntryCount} times (likely a re-entry loop)`,
         new Error('runCycle stack').stack,

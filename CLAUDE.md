@@ -162,13 +162,10 @@ npm run ios:open     # open ios/App/App.xcworkspace in Xcode
 
 # Both
 npm run typecheck    # strict tsc --noEmit across both build targets (Node + Web)
+npm run lint         # ESLint v9 flat config (eslint.config.mjs) — TS + React
 npm run test         # vitest run (FSRS + sync replayer)
 npm run db:reset     # delete the Mac SQLite file
 ```
-
-`npm run lint` exists in package.json but is currently broken — ESLint v9
-needs `eslint.config.js` and we still have the v8 config layout. Tracked
-as a follow-up.
 
 If you add a script, document it here.
 

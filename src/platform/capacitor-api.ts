@@ -12,7 +12,7 @@ import type { Result } from '@shared/result';
 import { ok, err } from '@shared/result';
 import type { JmdictEntry } from '@shared/types/jmdict';
 import type { Token } from '@shared/types/tokenizer';
-import type { TokenizerStatus, SyncStatus } from '@shared/ipc';
+import type { TokenizerStatus } from '@shared/ipc';
 import type {
   DeckEntry,
   SrsState,
@@ -157,7 +157,7 @@ function ensureTokenizer(): Promise<void> {
         const progress = getKuromojiProgress();
         const detail = progress.error ?? (e instanceof Error ? e.message : String(e));
         kuroError = detail;
-        // eslint-disable-next-line no-console
+         
         console.error('[kuromoji] build failed:', kuroError);
         notifyKuroListeners({ kind: 'failed', error: kuroError });
       } else {
@@ -927,7 +927,7 @@ function collectExamples(
 // this module via `api.*` and the first call already triggers `db()`, but we
 // kick it off eagerly so migrations run during the initial render frame.
 void db().catch((e) => {
-  // eslint-disable-next-line no-console
+   
   console.error('[capacitor-db] open failed', e);
 });
 
